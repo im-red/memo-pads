@@ -4,41 +4,54 @@ import { App as CapacitorApp } from '@capacitor/app';
 import type { PluginListenerHandle } from '@capacitor/core';
 import { Filesystem, Directory, Encoding } from '@capacitor/filesystem';
 import { Capacitor } from '@capacitor/core';
-import clsx from 'clsx';
-import { Memo, Notebook, ViewProgress, ExerciseResult } from './types/memo';
+import { Memo, Notebook, ViewProgress } from './types/memo';
 import useLocalStorageState from './hooks/useLocalStorageState';
 import NotebookList from './components/NotebookList';
 import MemoList from './components/MemoList';
 import AddMemoOverlay from './components/AddMemoOverlay';
 import AddNotebookOverlay from './components/AddNotebookOverlay';
-import ExerciseOverlay from './components/ExerciseOverlay';
 import ExportOverlay from './components/ExportOverlay';
 import ImportOverlay from './components/ImportOverlay';
 import WeReadImportOverlay from './components/WeReadImportOverlay';
+import TrashBinPage from './components/TrashBinPage';
 
 const NOTEBOOKS_KEY = 'memo-pads:notebooks';
 const MEMOS_KEY = 'memo-pads:memos';
 const PROGRESS_KEY = 'memo-pads:progress';
+const DEVICE_ID_KEY = 'memo-pads:device-id';
 
-type AppMode = 'view' | 'exercise';
+// Get or create device ID
+const getDeviceId = (): string => {
+  let deviceId = localStorage.getItem(DEVICE_ID_KEY);
+  if (!deviceId) {
+    deviceId = crypto.randomUUID ? crypto.randomUUID() : Math.random().toString(36).slice(2) + Date.now().toString(36);
+    localStorage.setItem(DEVICE_ID_KEY, deviceId);
+  }
+  return deviceId;
+};
 
-const App = () => {
-  const [notebooks, setNotebooks] = useLocalStorageState<Notebook[]>(NOTEBOOKS_KEY, []);
-  const [memos, setMemos] = useLocalStorageState<Memo[]>(MEMOS_KEY, []);
+interface AppProps {
+  notebooks: Notebook[];
+  setNotebooks: (notebooks: Notebook[]) => void;
+  memos: Memo[];
+  setMemos: (memos: Memo[]) => void;
+}
+
+const App: React.FC<AppProps> = ({ notebooks, setNotebooks, memos, setMemos }) => {
   const [viewProgress, setViewProgress] = useLocalStorageState<Record<string, ViewProgress>>(PROGRESS_KEY, {});
 
   const [selectedNotebookId, setSelectedNotebookId] = useState<string | null>(null);
-  const [appMode, setAppMode] = useState<AppMode>('view');
   const [isAddMemoOpen, setIsAddMemoOpen] = useState(false);
   const [memoOpenMode, setMemoOpenMode] = useState<'add' | 'paste'>('add');
   const [isAddNotebookOpen, setIsAddNotebookOpen] = useState(false);
-  const [isExerciseOpen, setIsExerciseOpen] = useState(false);
+  const [editNotebook, setEditNotebook] = useState<Notebook | null>(null);
   const [editMemo, setEditMemo] = useState<Memo | null>(null);
-  const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isExportOpen, setIsExportOpen] = useState(false);
   const [isImportOpen, setIsImportOpen] = useState(false);
   const [isWeReadImportOpen, setIsWeReadImportOpen] = useState(false);
-  const menuRef = useRef<HTMLDivElement>(null);
+  const [isTrashBinPageOpen, setIsTrashBinPageOpen] = useState(false);
+  const [isSideMenuOpen, setIsSideMenuOpen] = useState(false);
+  const sideMenuRef = useRef<HTMLDivElement>(null);
 
   const currentProgress = selectedNotebookId ? viewProgress[selectedNotebookId] : null;
   const showExplanation = currentProgress?.showExplanation ?? false;
@@ -47,31 +60,41 @@ const App = () => {
   const notebookMemos = useMemo(() => {
     if (!selectedNotebookId) return [];
     return memos
-      .filter(m => m.notebookId === selectedNotebookId)
-      .sort((a, b) => a.id - b.id);
+      .filter(m => m.notebookId === selectedNotebookId && !m.isDeleted)
+      .sort((a, b) => {
+        const timeCompare = new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime();
+        if (timeCompare !== 0) return timeCompare;
+        return a.importOrder - b.importOrder;
+      });
   }, [memos, selectedNotebookId]);
 
   const memoCounts = useMemo(() => {
     const counts: Record<string, number> = {};
     memos.forEach(m => {
-      counts[m.notebookId] = (counts[m.notebookId] || 0) + 1;
+      if (!m.isDeleted) {
+        counts[m.notebookId] = (counts[m.notebookId] || 0) + 1;
+      }
     });
     return counts;
   }, [memos]);
 
+  const activeNotebooks = useMemo(() => {
+    return notebooks.filter(n => !n.isDeleted);
+  }, [notebooks]);
+
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
-      if (menuRef.current && !menuRef.current.contains(event.target as Node)) {
-        setIsMenuOpen(false);
+      if (sideMenuRef.current && !sideMenuRef.current.contains(event.target as Node)) {
+        setIsSideMenuOpen(false);
       }
     };
-    if (isMenuOpen) {
+    if (isSideMenuOpen) {
       document.addEventListener('mousedown', handleClickOutside);
     }
     return () => {
       document.removeEventListener('mousedown', handleClickOutside);
     };
-  }, [isMenuOpen]);
+  }, [isSideMenuOpen]);
 
   useEffect(() => {
     let listener: PluginListenerHandle | undefined;
@@ -86,10 +109,6 @@ const App = () => {
         }
         if (isAddNotebookOpen) {
           setIsAddNotebookOpen(false);
-          return;
-        }
-        if (isExerciseOpen) {
-          setIsExerciseOpen(false);
           return;
         }
         if (isExportOpen) {
@@ -130,7 +149,7 @@ const App = () => {
         listener.remove();
       }
     };
-  }, [isAddMemoOpen, isAddNotebookOpen, isExerciseOpen, isExportOpen, isImportOpen, isWeReadImportOpen, selectedNotebookId]);
+  }, [isAddMemoOpen, isAddNotebookOpen, isExportOpen, isImportOpen, isWeReadImportOpen, selectedNotebookId]);
 
   const updateProgress = useCallback((notebookId: string, updates: Partial<ViewProgress>) => {
     setViewProgress(prev => ({
@@ -147,14 +166,17 @@ const App = () => {
 
   const handleSelectNotebook = useCallback((notebookId: string) => {
     setSelectedNotebookId(notebookId);
-    setAppMode('view');
   }, []);
 
   const handleAddNotebook = useCallback(async (name: string) => {
+    const now = new Date().toISOString();
     const newNotebook: Notebook = {
       id: crypto.randomUUID ? crypto.randomUUID() : Math.random().toString(36).slice(2),
       name,
-      createdAt: new Date().toISOString()
+      createdAt: now,
+      updatedAt: now,
+      version: 1,
+      deviceId: getDeviceId()
     };
     setNotebooks(prev => [...prev, newNotebook]);
     try {
@@ -164,11 +186,37 @@ const App = () => {
     }
   }, [setNotebooks]);
 
-  const handleDeleteNotebook = useCallback(async (notebookId: string) => {
-    if (!confirm('Delete this notebook and all its memos?')) return;
+  const handleEditNotebook = useCallback((notebook: Notebook) => {
+    const now = new Date().toISOString();
+    setNotebooks(prev => prev.map(n =>
+      n.id === notebook.id
+        ? { ...n, name: notebook.name, updatedAt: now, version: (n.version || 1) + 1 }
+        : n
+    ));
+    setEditNotebook(null);
+    setIsAddNotebookOpen(false);
+  }, [setNotebooks]);
 
-    setNotebooks(prev => prev.filter(n => n.id !== notebookId));
-    setMemos(prev => prev.filter(m => m.notebookId !== notebookId));
+  const handleDeleteNotebook = useCallback(async (notebookId: string) => {
+    if (!confirm('Delete this notebook and all its memos? They will be moved to trash.')) return;
+
+    const now = new Date().toISOString();
+    const deviceId = getDeviceId();
+
+    // Soft delete notebook
+    setNotebooks(prev => prev.map(n =>
+      n.id === notebookId
+        ? { ...n, isDeleted: true, deletedAt: now, deletedBy: deviceId, updatedAt: now, version: (n.version || 1) + 1 }
+        : n
+    ));
+
+    // Soft delete all memos in the notebook
+    setMemos(prev => prev.map(m =>
+      m.notebookId === notebookId
+        ? { ...m, isDeleted: true, deletedAt: now, deletedBy: deviceId, updatedAt: now, version: (m.version || 1) + 1 }
+        : m
+    ));
+
     setViewProgress(prev => {
       const next = { ...prev };
       delete next[notebookId];
@@ -183,10 +231,9 @@ const App = () => {
     }
   }, [setNotebooks, setMemos, setViewProgress]);
 
-  const getNextMemoId = useCallback(() => {
-    const maxId = memos.reduce((max, m) => Math.max(max, m.id), 0);
-    return maxId + 1;
-  }, [memos]);
+  const generateMemoId = useCallback(() => {
+    return crypto.randomUUID ? crypto.randomUUID() : Math.random().toString(36).slice(2) + Date.now().toString(36);
+  }, []);
 
   const handleAddMemo = useCallback(async (originalText: string, explanation: string) => {
     if (!selectedNotebookId) return;
@@ -200,12 +247,17 @@ const App = () => {
       throw new Error('This memo already exists in the current notebook');
     }
 
+    const now = new Date().toISOString();
     const newMemo: Memo = {
-      id: getNextMemoId(),
+      id: generateMemoId(),
       originalText,
       explanation,
       notebookId: selectedNotebookId,
-      createdAt: new Date().toISOString()
+      createdAt: now,
+      updatedAt: now,
+      importOrder: 0,
+      version: 1,
+      deviceId: getDeviceId()
     };
     setMemos(prev => [...prev, newMemo]);
 
@@ -218,10 +270,14 @@ const App = () => {
     } catch (error) {
       console.warn('Unable to trigger haptic feedback', error);
     }
-  }, [selectedNotebookId, getNextMemoId, setMemos, currentMemoId, updateProgress, memos]);
+  }, [selectedNotebookId, generateMemoId, setMemos, currentMemoId, updateProgress, memos]);
 
   const handleEditMemo = useCallback(async (updatedMemo: Memo) => {
-    setMemos(prev => prev.map(m => m.id === updatedMemo.id ? updatedMemo : m));
+    setMemos(prev => prev.map(m => m.id === updatedMemo.id ? {
+      ...updatedMemo,
+      updatedAt: new Date().toISOString(),
+      version: (updatedMemo.version || 1) + 1
+    } : m));
     setEditMemo(null);
 
     try {
@@ -231,13 +287,21 @@ const App = () => {
     }
   }, [setMemos]);
 
-  const handleDeleteMemo = useCallback(async (memoId: number) => {
-    if (!confirm('Delete this memo?')) return;
+  const handleDeleteMemo = useCallback(async (memoId: string) => {
+    if (!confirm('Delete this memo? It will be moved to trash.')) return;
 
-    setMemos(prev => prev.filter(m => m.id !== memoId));
+    const now = new Date().toISOString();
+    const deviceId = getDeviceId();
+
+    // Soft delete memo
+    setMemos(prev => prev.map(m =>
+      m.id === memoId
+        ? { ...m, isDeleted: true, deletedAt: now, deletedBy: deviceId, updatedAt: now, version: (m.version || 1) + 1 }
+        : m
+    ));
 
     if (selectedNotebookId) {
-      const remainingMemos = notebookMemos.filter(m => m.id !== memoId);
+      const remainingMemos = notebookMemos.filter(m => m.id !== memoId && !m.isDeleted);
       if (remainingMemos.length > 0) {
         const currentIndex = notebookMemos.findIndex(m => m.id === memoId);
         const newIndex = Math.min(currentIndex, remainingMemos.length - 1);
@@ -254,26 +318,86 @@ const App = () => {
     }
   }, [setMemos, selectedNotebookId, notebookMemos, updateProgress]);
 
+  const handleRestoreNotebook = useCallback(async (notebookId: string) => {
+    const now = new Date().toISOString();
+
+    // Restore notebook
+    setNotebooks(prev => prev.map(n =>
+      n.id === notebookId
+        ? { ...n, isDeleted: false, deletedAt: undefined, deletedBy: undefined, updatedAt: now, version: (n.version || 1) + 1 }
+        : n
+    ));
+
+    // Restore all memos in the notebook
+    setMemos(prev => prev.map(m =>
+      m.notebookId === notebookId
+        ? { ...m, isDeleted: false, deletedAt: undefined, deletedBy: undefined, updatedAt: now, version: (m.version || 1) + 1 }
+        : m
+    ));
+
+    try {
+      await Haptics.impact({ style: ImpactStyle.Medium });
+    } catch (error) {
+      console.warn('Unable to trigger haptic feedback', error);
+    }
+  }, [setNotebooks, setMemos]);
+
+  const handleRestoreMemo = useCallback(async (memoId: string) => {
+    const now = new Date().toISOString();
+
+    // Restore memo
+    setMemos(prev => prev.map(m =>
+      m.id === memoId
+        ? { ...m, isDeleted: false, deletedAt: undefined, deletedBy: undefined, updatedAt: now, version: (m.version || 1) + 1 }
+        : m
+    ));
+
+    try {
+      await Haptics.impact({ style: ImpactStyle.Medium });
+    } catch (error) {
+      console.warn('Unable to trigger haptic feedback', error);
+    }
+  }, [setMemos]);
+
+  const handlePermanentDeleteNotebook = useCallback(async (notebookId: string) => {
+    // Permanently remove notebook and its memos
+    setNotebooks(prev => prev.filter(n => n.id !== notebookId));
+    setMemos(prev => prev.filter(m => m.notebookId !== notebookId));
+    setViewProgress(prev => {
+      const next = { ...prev };
+      delete next[notebookId];
+      return next;
+    });
+
+    try {
+      await Haptics.impact({ style: ImpactStyle.Heavy });
+    } catch (error) {
+      console.warn('Unable to trigger haptic feedback', error);
+    }
+  }, [setNotebooks, setMemos, setViewProgress]);
+
+  const handlePermanentDeleteMemo = useCallback(async (memoId: string) => {
+    // Permanently remove memo
+    setMemos(prev => prev.filter(m => m.id !== memoId));
+
+    try {
+      await Haptics.impact({ style: ImpactStyle.Heavy });
+    } catch (error) {
+      console.warn('Unable to trigger haptic feedback', error);
+    }
+  }, [setMemos]);
+
   const handleToggleExplanation = useCallback(() => {
     if (selectedNotebookId) {
       updateProgress(selectedNotebookId, { showExplanation: !showExplanation });
     }
   }, [selectedNotebookId, showExplanation, updateProgress]);
 
-  const handleNavigateMemo = useCallback((memoId: number) => {
+  const handleNavigateMemo = useCallback((memoId: string) => {
     if (selectedNotebookId) {
       updateProgress(selectedNotebookId, { currentMemoId: memoId });
     }
   }, [selectedNotebookId, updateProgress]);
-
-  const handleStartExercise = useCallback(() => {
-    setIsExerciseOpen(true);
-  }, []);
-
-  const handleExerciseComplete = useCallback((results: ExerciseResult[]) => {
-    console.log('Exercise results:', results);
-    setIsExerciseOpen(false);
-  }, []);
 
   const handleExport = useCallback(async (selectedNotebookIds: string[]) => {
     const selectedNotebooks = notebooks.filter(n => selectedNotebookIds.includes(n.id));
@@ -311,12 +435,11 @@ const App = () => {
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
-      a.download = 'memo-pads.json';
+      a.download = `memo-pads-${Date.now()}.json`;
       a.click();
       URL.revokeObjectURL(url);
     }
     setIsExportOpen(false);
-    setIsMenuOpen(false);
   }, [notebooks, memos, viewProgress]);
 
   const handleImport = useCallback((newNotebooks: Notebook[], newMemos: Memo[], updatedNotebooks: Notebook[]) => {
@@ -333,27 +456,11 @@ const App = () => {
       setMemos(prev => [...prev, ...newMemos]);
     }
     setIsImportOpen(false);
-    setIsMenuOpen(false);
     const totalNotebooks = newNotebooks.length + updatedNotebooks.length;
     alert(`Imported ${totalNotebooks} notebooks and ${newMemos.length} memos.`);
   }, [setNotebooks, setMemos]);
 
-  const handleWeReadImport = useCallback((newMemos: Memo[], notebookName: string) => {
-    let targetNotebook = notebooks.find(n => n.name === notebookName);
-    let targetNotebookId: string;
-
-    if (targetNotebook) {
-      targetNotebookId = targetNotebook.id;
-    } else {
-      targetNotebookId = crypto.randomUUID ? crypto.randomUUID() : Math.random().toString(36).slice(2);
-      const newNotebook: Notebook = {
-        id: targetNotebookId,
-        name: notebookName,
-        createdAt: new Date().toISOString()
-      };
-      setNotebooks(prev => [...prev, newNotebook]);
-    }
-
+  const handleWeReadImport = useCallback((newMemos: Memo[], targetNotebookId: string) => {
     const memosWithNotebookId = newMemos.map(m => ({
       ...m,
       notebookId: targetNotebookId
@@ -361,8 +468,8 @@ const App = () => {
 
     setMemos(prev => [...prev, ...memosWithNotebookId]);
     setIsWeReadImportOpen(false);
-    setIsMenuOpen(false);
-    alert(`Imported ${newMemos.length} notes to "${notebookName}".`);
+    const targetNotebook = notebooks.find(n => n.id === targetNotebookId);
+    alert(`Imported ${newMemos.length} notes to "${targetNotebook?.name || 'selected notebook'}".`);
   }, [notebooks, setNotebooks, setMemos]);
 
   const handleOpenAddMemo = (mode: 'add' | 'paste' = 'add') => {
@@ -391,44 +498,104 @@ const App = () => {
   }, [selectedNotebookId, initialMemoId, currentMemoId, updateProgress]);
 
   if (!selectedNotebookId) {
+    if (isTrashBinPageOpen) {
+      return (
+        <TrashBinPage
+          notebooks={notebooks}
+          memos={memos}
+          onRestoreNotebook={handleRestoreNotebook}
+          onRestoreMemo={handleRestoreMemo}
+          onPermanentDeleteNotebook={handlePermanentDeleteNotebook}
+          onPermanentDeleteMemo={handlePermanentDeleteMemo}
+          onBack={() => setIsTrashBinPageOpen(false)}
+        />
+      );
+    }
+
     return (
       <div className="app-shell">
+        {/* Side Menu */}
+        {isSideMenuOpen && <div className="side-menu-backdrop" onClick={() => setIsSideMenuOpen(false)} />}
+        <div ref={sideMenuRef} className={`side-menu ${isSideMenuOpen ? 'side-menu--open' : ''}`}>
+          <div className="side-menu-header">
+            <h2>Menu</h2>
+            <button
+              type="button"
+              className="side-menu-close"
+              onClick={() => setIsSideMenuOpen(false)}
+            >
+              ×
+            </button>
+          </div>
+          <div className="side-menu-content">
+            <button
+              type="button"
+              className="side-menu-item"
+              onClick={() => {
+                setIsTrashBinPageOpen(true);
+                setIsSideMenuOpen(false);
+              }}
+            >
+              🗑️ Trash Bin
+            </button>
+            <button
+              type="button"
+              className="side-menu-item"
+              onClick={() => {
+                setIsExportOpen(true);
+                setIsSideMenuOpen(false);
+              }}
+            >
+              📤 Export Data
+            </button>
+            <button
+              type="button"
+              className="side-menu-item"
+              onClick={() => {
+                setIsImportOpen(true);
+                setIsSideMenuOpen(false);
+              }}
+            >
+              📥 Import Data
+            </button>
+            <button
+              type="button"
+              className="side-menu-item"
+              onClick={() => {
+                setIsWeReadImportOpen(true);
+                setIsSideMenuOpen(false);
+              }}
+            >
+              📖 Import WeRead Notes
+            </button>
+          </div>
+        </div>
+
         <header className="app-header app-header--main">
+          <button
+            type="button"
+            className="menu-trigger-btn"
+            onClick={() => setIsSideMenuOpen(true)}
+          >
+            ☰
+          </button>
           <div className="header-content">
             <p className="eyebrow">Vocabulary Book</p>
             <h1>Memo Pads</h1>
             <p className="subtitle">
-              Organize your vocabulary with notebooks. Learn and review with exercise mode.
+              Organize your vocabulary with notebooks.
             </p>
-          </div>
-          <div className="header-menu" ref={menuRef}>
-            <button
-              type="button"
-              className="menu-btn"
-              onClick={() => setIsMenuOpen(v => !v)}
-            >
-              ⋮
-            </button>
-            {isMenuOpen && (
-              <div className="menu-dropdown">
-                <button type="button" onClick={() => { setIsExportOpen(true); setIsMenuOpen(false); }}>
-                  Export Data
-                </button>
-                <button type="button" onClick={() => { setIsImportOpen(true); setIsMenuOpen(false); }}>
-                  Import Data
-                </button>
-              </div>
-            )}
           </div>
         </header>
 
         <main>
           <section className="container">
             <NotebookList
-              notebooks={notebooks}
+              notebooks={activeNotebooks}
               selectedNotebookId={selectedNotebookId}
               onSelect={handleSelectNotebook}
-              onAdd={() => setIsAddNotebookOpen(true)}
+              onAdd={() => { setEditNotebook(null); setIsAddNotebookOpen(true); }}
+              onEdit={(notebook) => { setEditNotebook(notebook); setIsAddNotebookOpen(true); }}
               onDelete={handleDeleteNotebook}
               memoCounts={memoCounts}
             />
@@ -437,8 +604,10 @@ const App = () => {
 
         <AddNotebookOverlay
           isOpen={isAddNotebookOpen}
-          onClose={() => setIsAddNotebookOpen(false)}
+          onClose={() => { setIsAddNotebookOpen(false); setEditNotebook(null); }}
           onSave={handleAddNotebook}
+          onEdit={handleEditNotebook}
+          editNotebook={editNotebook}
         />
 
         <ExportOverlay
@@ -453,10 +622,18 @@ const App = () => {
           isOpen={isImportOpen}
           existingNotebooks={notebooks}
           existingMemos={memos}
-          getNextMemoId={getNextMemoId}
           onClose={() => setIsImportOpen(false)}
           onImport={handleImport}
         />
+
+        <WeReadImportOverlay
+          isOpen={isWeReadImportOpen}
+          notebooks={notebooks}
+          existingMemos={memos}
+          onClose={() => setIsWeReadImportOpen(false)}
+          onImport={handleWeReadImport}
+        />
+
       </div>
     );
   }
@@ -477,69 +654,21 @@ const App = () => {
           <h1>{selectedNotebook?.name}</h1>
           <p className="memo-count">{notebookMemos.length} memos</p>
         </div>
-        <div className="header-menu" ref={menuRef}>
-          <button
-            type="button"
-            className="menu-btn"
-            onClick={() => setIsMenuOpen(v => !v)}
-          >
-            ⋮
-          </button>
-          {isMenuOpen && (
-            <div className="menu-dropdown">
-              <button type="button" onClick={() => { setIsWeReadImportOpen(true); setIsMenuOpen(false); }}>
-                Import WeRead Notes
-              </button>
-            </div>
-          )}
-        </div>
       </header>
 
       <main>
         <section className="container">
-          <div className="mode-switch">
-            <button
-              type="button"
-              className={clsx('mode-btn', { active: appMode === 'view' })}
-              onClick={() => setAppMode('view')}
-            >
-              View Mode
-            </button>
-            <button
-              type="button"
-              className={clsx('mode-btn', { active: appMode === 'exercise' })}
-              onClick={handleStartExercise}
-            >
-              Exercise Mode
-            </button>
-          </div>
-
-          {appMode === 'view' && (
-            <MemoList
-              memos={notebookMemos}
-              showExplanation={showExplanation}
-              currentMemoId={initialMemoId}
-              onToggleExplanation={handleToggleExplanation}
-              onNavigate={handleNavigateMemo}
-              onAdd={handleOpenAddMemo}
-              onPaste={() => handleOpenAddMemo('paste')}
-              onEdit={handleOpenEditMemo}
-              onDelete={handleDeleteMemo}
-            />
-          )}
-
-          {appMode === 'exercise' && (
-            <div className="exercise-intro">
-              <p>Click "Start Exercise" to begin reviewing your memos in random order.</p>
-              <button
-                type="button"
-                className="btn-primary btn-lg"
-                onClick={handleStartExercise}
-              >
-                Start Exercise
-              </button>
-            </div>
-          )}
+          <MemoList
+            memos={notebookMemos}
+            showExplanation={showExplanation}
+            currentMemoId={initialMemoId}
+            onToggleExplanation={handleToggleExplanation}
+            onNavigate={handleNavigateMemo}
+            onAdd={handleOpenAddMemo}
+            onPaste={() => handleOpenAddMemo('paste')}
+            onEdit={handleOpenEditMemo}
+            onDelete={handleDeleteMemo}
+          />
         </section>
       </main>
 
@@ -555,23 +684,22 @@ const App = () => {
         openMode={memoOpenMode}
       />
 
-      <ExerciseOverlay
-        isOpen={isExerciseOpen}
-        memos={notebookMemos}
-        onClose={() => setIsExerciseOpen(false)}
-        onComplete={handleExerciseComplete}
-      />
-
-      <WeReadImportOverlay
-        isOpen={isWeReadImportOpen}
-        currentNotebookName={selectedNotebook?.name || ''}
-        existingMemos={notebookMemos}
-        getNextMemoId={getNextMemoId}
-        onClose={() => setIsWeReadImportOpen(false)}
-        onImport={handleWeReadImport}
-      />
     </div>
   );
 };
 
-export default App;
+const AppWithStorage: React.FC = () => {
+  const [notebooks, setNotebooks] = useLocalStorageState<Notebook[]>(NOTEBOOKS_KEY, []);
+  const [memos, setMemos] = useLocalStorageState<Memo[]>(MEMOS_KEY, []);
+
+  return (
+    <App
+      notebooks={notebooks}
+      setNotebooks={setNotebooks}
+      memos={memos}
+      setMemos={setMemos}
+    />
+  );
+};
+
+export default AppWithStorage;

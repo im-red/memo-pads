@@ -1,18 +1,32 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { Notebook } from '../types/memo';
 
 interface AddNotebookOverlayProps {
   isOpen: boolean;
   onClose: () => void;
   onSave: (name: string) => void;
+  onEdit?: (notebook: Notebook) => void;
+  editNotebook?: Notebook | null;
 }
 
 const AddNotebookOverlay = ({
   isOpen,
   onClose,
-  onSave
+  onSave,
+  onEdit,
+  editNotebook
 }: AddNotebookOverlayProps) => {
   const [name, setName] = useState('');
   const [error, setError] = useState('');
+
+  useEffect(() => {
+    if (editNotebook) {
+      setName(editNotebook.name);
+    } else {
+      setName('');
+    }
+    setError('');
+  }, [editNotebook, isOpen]);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -20,7 +34,12 @@ const AddNotebookOverlay = ({
       setError('Notebook name is required');
       return;
     }
-    onSave(name.trim());
+
+    if (editNotebook && onEdit) {
+      onEdit({ ...editNotebook, name: name.trim() });
+    } else {
+      onSave(name.trim());
+    }
     setName('');
     setError('');
     onClose();
@@ -33,7 +52,7 @@ const AddNotebookOverlay = ({
       <div className="overlay-backdrop" onClick={onClose} />
       <div className="overlay-panel">
         <div className="overlay-header">
-          <h2>New Notebook</h2>
+          <h2>{editNotebook ? 'Edit Notebook' : 'New Notebook'}</h2>
           <button type="button" className="overlay-close" onClick={onClose}>
             ×
           </button>
@@ -54,7 +73,7 @@ const AddNotebookOverlay = ({
           {error && <p className="form-error">{error}</p>}
 
           <button type="submit" className="btn-primary">
-            Create Notebook
+            {editNotebook ? 'Save Changes' : 'Create Notebook'}
           </button>
         </form>
       </div>

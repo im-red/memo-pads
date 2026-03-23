@@ -11,7 +11,6 @@ interface ImportOverlayProps {
   isOpen: boolean;
   existingNotebooks: Notebook[];
   existingMemos: Memo[];
-  getNextMemoId: () => number;
   onClose: () => void;
   onImport: (newNotebooks: Notebook[], newMemos: Memo[], updatedNotebooks: Notebook[]) => void;
 }
@@ -20,7 +19,6 @@ const ImportOverlay = ({
   isOpen,
   existingNotebooks,
   existingMemos,
-  getNextMemoId,
   onClose,
   onImport
 }: ImportOverlayProps) => {
@@ -108,8 +106,7 @@ const ImportOverlay = ({
       selectedNotebooks,
       selectedMemos,
       existingNotebooks,
-      existingMemos,
-      getNextMemoId
+      existingMemos
     );
 
     onImport(result.newNotebooks, result.newMemos, result.updatedNotebooks);

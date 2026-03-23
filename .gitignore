@@ -24,6 +24,7 @@ yarn-error.log*
 *.swp
 *.swo
 *~
+*.code-workspace
 
 # Capacitor
 .capacitor/

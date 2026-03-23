@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { Notebook, Memo } from '../types/memo';
 
 interface ExportOverlayProps {
@@ -16,7 +16,13 @@ const ExportOverlay = ({
   onClose,
   onExport
 }: ExportOverlayProps) => {
-  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set(notebooks.map(n => n.id)));
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+
+  useEffect(() => {
+    if (isOpen) {
+      setSelectedIds(new Set(notebooks.map(n => n.id)));
+    }
+  }, [isOpen, notebooks]);
 
   const preview = useMemo(() => {
     const selectedNotebooks = notebooks.filter(n => selectedIds.has(n.id));

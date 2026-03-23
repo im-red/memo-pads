@@ -1,4 +1,11 @@
 import { defineConfig, devices } from '@playwright/test';
+import * as dotenv from 'dotenv';
+import * as path from 'path';
+
+const envPath = path.join(__dirname, 'tests', '.env');
+if (require('fs').existsSync(envPath)) {
+  dotenv.config({ path: envPath });
+}
 
 export default defineConfig({
   testDir: './tests',
@@ -6,10 +13,24 @@ export default defineConfig({
   forbidOnly: !!process.env.CI,
   retries: process.env.CI ? 2 : 0,
   workers: process.env.CI ? 1 : undefined,
-  reporter: 'html',
+  reporter: [['html', { open: 'never' }]],
+  timeout: 10000,
   use: {
     baseURL: 'http://localhost:3001',
     trace: 'on-first-retry',
+    launchOptions: {
+      args: [
+        '--no-sandbox',
+        '--disable-setuid-sandbox',
+        '--disable-crash-reporter',
+        '--disable-breakpad',
+        '--force-color-profile=srgb',
+        '--disable-logging',
+        '--log-level=3',
+        '--disable-dev-shm-usage',
+        '--disable-gpu',
+        '--disable-software-rasterizer']
+    },
   },
   projects: [
     {

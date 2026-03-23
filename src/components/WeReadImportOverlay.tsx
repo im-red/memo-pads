@@ -1,38 +1,34 @@
-import { useState, useMemo, useRef, useEffect } from 'react';
-import { Memo } from '../types/memo';
+import { useState, useMemo, useRef } from 'react';
+import { Memo, Notebook } from '../types/memo';
 import { parseWeReadNotes, WeReadNote } from '../utils/wereadParser';
 
 interface WeReadImportOverlayProps {
   isOpen: boolean;
-  currentNotebookName: string;
+  notebooks: Notebook[];
   existingMemos: Memo[];
-  getNextMemoId: () => number;
   onClose: () => void;
-  onImport: (newMemos: Memo[], notebookName: string) => void;
+  onImport: (newMemos: Memo[], notebookId: string) => void;
 }
 
 type InputMode = 'file' | 'text';
 
 const WeReadImportOverlay = ({
   isOpen,
-  currentNotebookName,
+  notebooks,
   existingMemos,
-  getNextMemoId,
   onClose,
   onImport
 }: WeReadImportOverlayProps) => {
   const [inputMode, setInputMode] = useState<InputMode>('file');
   const [textContent, setTextContent] = useState('');
   const [notes, setNotes] = useState<WeReadNote[]>([]);
-  const [notebookName, setNotebookName] = useState('');
+  const [selectedNotebookId, setSelectedNotebookId] = useState('');
   const [error, setError] = useState('');
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  useEffect(() => {
-    if (isOpen && currentNotebookName) {
-      setNotebookName(currentNotebookName);
-    }
-  }, [isOpen, currentNotebookName]);
+  const activeNotebooks = useMemo(() => {
+    return notebooks.filter(n => !n.isDeleted);
+  }, [notebooks]);
 
   const preview = useMemo(() => {
     if (notes.length === 0) return null;
@@ -113,14 +109,18 @@ const WeReadImportOverlay = ({
 
   const handleConfirm = () => {
     if (notes.length === 0) return;
-    if (!notebookName.trim()) {
-      setError('Notebook name is required');
+    if (!selectedNotebookId) {
+      setError('Please select a notebook');
       return;
     }
 
-    let nextId = getNextMemoId();
+    const generateMemoId = () => crypto.randomUUID ? crypto.randomUUID() : Math.random().toString(36).slice(2) + Date.now().toString(36);
     const newMemos: Memo[] = [];
+    const now = new Date().toISOString();
+    const deviceId = localStorage.getItem('memo-pads:device-id') ||
+      (crypto.randomUUID ? crypto.randomUUID() : Math.random().toString(36).slice(2) + Date.now().toString(36));
 
+    let importOrder = 0;
     notes.forEach(note => {
       const isDuplicate = existingMemos.some(
         existing =>
@@ -129,23 +129,27 @@ const WeReadImportOverlay = ({
       );
       if (!isDuplicate) {
         newMemos.push({
-          id: nextId++,
+          id: generateMemoId(),
           originalText: note.originalText,
           explanation: note.explanation,
           notebookId: '',
-          createdAt: new Date().toISOString()
+          createdAt: now,
+          updatedAt: now,
+          importOrder: importOrder++,
+          version: 1,
+          deviceId
         });
       }
     });
 
-    onImport(newMemos, notebookName.trim());
+    onImport(newMemos, selectedNotebookId);
     resetState();
   };
 
   const resetState = () => {
     setNotes([]);
     setTextContent('');
-    setNotebookName('');
+    setSelectedNotebookId('');
     setError('');
     setInputMode('file');
   };
@@ -244,15 +248,20 @@ const WeReadImportOverlay = ({
 
             <form onSubmit={e => { e.preventDefault(); handleConfirm(); }} className="memo-form">
               <div className="form-group">
-                <label htmlFor="notebookName">Import to Notebook</label>
-                <input
-                  id="notebookName"
-                  type="text"
-                  value={notebookName}
-                  onChange={e => setNotebookName(e.target.value)}
-                  placeholder="Enter notebook name..."
-                  autoFocus
-                />
+                <label htmlFor="notebookSelect">Import to Notebook</label>
+                <select
+                  id="notebookSelect"
+                  value={selectedNotebookId}
+                  onChange={e => setSelectedNotebookId(e.target.value)}
+                  className="notebook-select"
+                >
+                  <option value="">Select a notebook...</option>
+                  {activeNotebooks.map(notebook => (
+                    <option key={notebook.id} value={notebook.id}>
+                      {notebook.name}
+                    </option>
+                  ))}
+                </select>
               </div>
 
               {error && <p className="form-error">{error}</p>}
@@ -268,7 +277,7 @@ const WeReadImportOverlay = ({
                 <button
                   type="submit"
                   className="btn-primary"
-                  disabled={preview?.newMemos === 0}
+                  disabled={preview?.newMemos === 0 || !selectedNotebookId}
                 >
                   Import {preview?.newMemos || 0} Notes
                 </button>

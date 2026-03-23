@@ -5,13 +5,13 @@ import { useState, useRef, useEffect } from 'react';
 interface MemoListProps {
   memos: Memo[];
   showExplanation: boolean;
-  currentMemoId: number | null;
+  currentMemoId: string | null;
   onToggleExplanation: () => void;
-  onNavigate: (memoId: number) => void;
+  onNavigate: (memoId: string) => void;
   onAdd: () => void;
   onPaste: () => void;
   onEdit: (memo: Memo) => void;
-  onDelete: (memoId: number) => void;
+  onDelete: (memoId: string) => void;
 }
 
 const MemoList = ({

@@ -126,8 +126,7 @@ export function executeImport(
   selectedNotebooks: Notebook[],
   selectedMemos: Memo[],
   existingNotebooks: Notebook[],
-  existingMemos: Memo[],
-  getNextMemoId: () => number
+  existingMemos: Memo[]
 ): ImportResult {
   const { newNotebooks, updatedNotebooks, notebookIdMap } = matchNotebooks(
     selectedNotebooks,
@@ -141,13 +140,50 @@ export function executeImport(
     existingNotebooks
   );
 
-  let nextId = getNextMemoId();
-  const newMemos = filteredMemos.map(memo => {
+  const generateMemoId = () => crypto.randomUUID ? crypto.randomUUID() : Math.random().toString(36).slice(2) + Date.now().toString(36);
+
+  // Sort memos by legacy numeric ID if present (for backward compatibility), 
+  // then by createdAt, then by importOrder
+  const sortedMemos = [...filteredMemos].sort((a, b) => {
+    // Check if IDs are numeric (legacy format)
+    const aIdNum = typeof a.id === 'number' ? a.id : parseInt(String(a.id));
+    const bIdNum = typeof b.id === 'number' ? b.id : parseInt(String(b.id));
+
+    if (!isNaN(aIdNum) && !isNaN(bIdNum)) {
+      // Both are numeric IDs (legacy), sort by ID
+      return aIdNum - bIdNum;
+    }
+
+    // Sort by createdAt
+    const timeCompare = new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime();
+    if (timeCompare !== 0) return timeCompare;
+
+    // Sort by importOrder if available
+    const aOrder = a.importOrder ?? 0;
+    const bOrder = b.importOrder ?? 0;
+    return aOrder - bOrder;
+  });
+
+  // Group memos by createdAt to assign importOrder for memos with same timestamp
+  const memosByTime = new Map<string, Memo[]>();
+  sortedMemos.forEach(memo => {
+    const timeKey = memo.createdAt;
+    if (!memosByTime.has(timeKey)) {
+      memosByTime.set(timeKey, []);
+    }
+    memosByTime.get(timeKey)!.push(memo);
+  });
+
+  const newMemos = sortedMemos.map((memo) => {
     const newNotebookId = notebookIdMap.get(memo.notebookId);
+    const memosAtSameTime = memosByTime.get(memo.createdAt) || [];
+    const importOrder = memosAtSameTime.indexOf(memo);
+
     return {
       ...memo,
-      id: nextId++,
-      notebookId: newNotebookId || memo.notebookId
+      id: generateMemoId(),
+      notebookId: newNotebookId || memo.notebookId,
+      importOrder: importOrder
     };
   });
 
