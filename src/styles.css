@@ -38,51 +38,32 @@ body {
 .app-header {
   background: var(--primary);
   color: white;
-  padding: 2.5rem 1rem;
-  position: relative;
-}
-
-.app-header--main {
-  display: flex;
-  justify-content: space-between;
-  align-items: flex-start;
-}
-
-.app-header--main .header-content {
-  flex: 1;
-  text-align: center;
-}
-
-.app-header--main .header-menu {
-  position: absolute;
-  top: 1rem;
-  right: 1rem;
-}
-
-.app-header--compact {
-  padding: 1rem 1.5rem;
+  padding: 1rem;
   display: flex;
   align-items: center;
   gap: 1rem;
 }
 
-.app-header h1 {
-  font-size: 1.9rem;
-  font-weight: 600;
-  margin-top: 0.4rem;
+.header-title {
+  flex: 1;
+  min-height: 44px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
 }
 
-.eyebrow {
-  text-transform: uppercase;
-  letter-spacing: 0.08em;
+.header-title h1 {
+  font-size: 1.25rem;
+  font-weight: 600;
+  margin: 0;
+  line-height: 1.2;
+}
+
+.memo-count {
   font-size: 0.85rem;
   opacity: 0.85;
-}
-
-.subtitle {
-  max-width: 460px;
-  margin: 0.75rem auto 0;
-  opacity: 0.9;
+  margin: 0;
+  line-height: 1.2;
 }
 
 .back-btn {
@@ -93,21 +74,11 @@ body {
   font-weight: 600;
   cursor: pointer;
   padding: 0.5rem;
-}
-
-.notebook-title {
-  flex: 1;
-}
-
-.notebook-title h1 {
-  font-size: 1.25rem;
-  margin: 0;
-}
-
-.memo-count {
-  font-size: 0.85rem;
-  opacity: 0.85;
-  margin: 0;
+  min-width: 44px;
+  min-height: 44px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .header-menu {
@@ -1006,10 +977,6 @@ textarea:focus {
 }
 
 @media (max-width: 768px) {
-  .app-header h1 {
-    font-size: 1.6rem;
-  }
-
   .container {
     margin-top: -1.5rem;
     padding: 0 0.25rem;
@@ -1032,10 +999,6 @@ textarea:focus {
   }
 
   .app-header {
-    padding-top: max(2.5rem, env(safe-area-inset-top));
-  }
-
-  .app-header--compact {
     padding-top: max(1rem, env(safe-area-inset-top));
   }
 }
@@ -2727,28 +2690,21 @@ select {
 }
 
 .menu-trigger-btn {
-  position: absolute;
-  top: 1rem;
-  left: 1rem;
   background: none;
   border: none;
   color: white;
   font-size: 1.5rem;
   cursor: pointer;
-  padding: 0.5rem 0.75rem;
+  padding: 0.5rem;
   border-radius: 8px;
   line-height: 1;
   transition: background 0.2s;
-  z-index: 10;
   min-width: 44px;
   min-height: 44px;
   display: flex;
   align-items: center;
   justify-content: center;
-}
-
-.menu-trigger-btn:hover {
-  background: rgba(255, 255, 255, 0.1);
+  flex-shrink: 0;
 }
 
 .menu-trigger-btn:active {
@@ -2783,13 +2739,6 @@ select {
   .side-menu {
     width: 80%;
     max-width: 280px;
-  }
-
-  .menu-trigger-btn {
-    top: 0.75rem;
-    left: 0.75rem;
-    padding: 0.4rem 0.6rem;
-    font-size: 1.3rem;
   }
 
   .trash-page-content {

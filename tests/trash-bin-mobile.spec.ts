@@ -115,7 +115,7 @@ test.describe('Trash Bin Mobile UI', () => {
 
         // Verify it's a full page, not an overlay
         await expect(page.locator('.trash-page-content')).toBeVisible();
-        await expect(page.locator('.app-header--compact')).toBeVisible();
+        await expect(page.locator('.back-btn')).toBeVisible();
         await expect(page.locator('button:has-text("← Back")')).toBeVisible();
 
         // Verify side menu is closed
@@ -165,7 +165,7 @@ test.describe('Trash Bin Mobile UI', () => {
         await page.waitForSelector('.trash-page-content', { state: 'hidden' });
 
         // Verify we're back at home
-        await expect(page.locator('.app-header:not(.app-header--compact)')).toBeVisible();
+        await expect(page.locator('.menu-trigger-btn')).toBeVisible();
         await expect(page.locator('h1:has-text("Memo Pads")')).toBeVisible();
     });
 

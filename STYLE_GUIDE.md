@@ -49,6 +49,69 @@ AI agents must follow these structural rules to ensure the app doesn't look like
 - **Shadow:** `0 4px 12px rgba(0, 0, 0, 0.05)`. Avoid heavy black shadows.
 - **Interaction:** Cards that are clickable must show a ripple effect or background color change on press.
 
+### Headers
+- **Background:** Use `--primary` color with white text for consistent branding.
+- **Height:** Fixed padding of `1rem` (16px) on all sides. Total height should be compact (~60-70px including safe area).
+- **Layout:** Flexbox with `align-items: center` and `gap: 1rem`.
+- **Structure:**
+  - Left: Navigation button (Hamburger Menu on root screens, Back Button on sub-pages).
+  - Center/Right: Title container (`.header-title`) with `flex: 1`.
+- **Title Styling:**
+  - Font size: `1.25rem` (20px), Semi-bold.
+  - Line height: `1.2` for compact vertical spacing.
+  - Optional subtitle (e.g., memo count): `0.85rem`, opacity `0.85`.
+- **Navigation Buttons:**
+  - Minimum touch target: `44x44px`.
+  - Use `flex-shrink: 0` to prevent shrinking in flexbox.
+  - No `:hover` states; use `:active` with opacity `0.7` for tactile feedback.
+- **Safe Area:** Use `padding-top: max(1rem, env(safe-area-inset-top))` to handle device notches.
+- **Consistency:** All screens (root, sub-pages, trash bin) must use identical header geometry.
+
+### Overlays (Modals)
+- **Use Case:** Temporary tasks like "Create New," "Edit," "Filter," or confirmation dialogs.
+- **Backdrop:**
+  - Background: `rgba(15, 23, 42, 0.45)` with `backdrop-filter: blur(4px)`.
+  - Must cover the entire screen (`position: fixed; inset: 0`).
+  - Clicking the backdrop should close the overlay.
+- **Panel:**
+  - Width: `min(480px, 100%)` - capped at 480px for tablet/desktop.
+  - Background: `var(--background)` (white).
+  - Border radius: `16px` for large components.
+  - Padding: `1rem` (16px).
+  - Max height: `90vh` with `overflow-y: auto` for scrollable content.
+  - Shadow: `var(--shadow-lg)` for depth.
+- **Animation:**
+  - Slide up from bottom: `transform: translateY(100%)` → `translateY(0)`.
+  - Duration: `0.25s` with `ease` timing.
+  - Use hardware-accelerated `transform` for smooth performance.
+- **Header:**
+  - Layout: Flexbox with `justify-content: space-between` and `align-items: center`.
+  - Margin bottom: `1.5rem` to separate from content.
+  - **Title (left side):**
+    - Use `<h2>` element.
+    - Font size: `1.25rem`, Semi-bold.
+    - Color: `var(--text-main)` (default).
+    - Margin: 0 (reset default).
+  - **Close Button (right side):**
+    - Background: `none`, Border: `none`.
+    - Font size: `1.5rem` (typically `×` character).
+    - Color: `var(--text-muted)`.
+    - Padding: `0.5rem`.
+    - Minimum touch target: `44x44px`.
+    - Display: `flex` with `align-items: center` and `justify-content: center`.
+    - Active state: Optional opacity change for tactile feedback.
+  - **Structure Example:**
+    ```html
+    <div class="overlay-header">
+      <h2>Overlay Title</h2>
+      <button class="overlay-close">×</button>
+    </div>
+    ```
+- **Scrolling:**
+  - Use `-webkit-overflow-scrolling: touch` for smooth iOS scrolling.
+  - Hide scrollbars: `scrollbar-width: none` and `::-webkit-scrollbar { display: none }`.
+- **Z-index:** Use `z-index: 100` for overlay container (below side menu at 999-1000).
+
 ## Navigation & Transitions
 
 ### Transition Logic

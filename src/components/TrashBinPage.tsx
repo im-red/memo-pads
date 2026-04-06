@@ -55,7 +55,7 @@ const TrashBinPage: React.FC<TrashBinPageProps> = ({
 
     return (
         <div className="app-shell">
-            <header className="app-header app-header--compact">
+            <header className="app-header">
                 <button
                     type="button"
                     className="back-btn"
@@ -63,7 +63,7 @@ const TrashBinPage: React.FC<TrashBinPageProps> = ({
                 >
                     ← Back
                 </button>
-                <div className="notebook-title">
+                <div className="header-title">
                     <h1>🗑️ Trash Bin</h1>
                 </div>
             </header>

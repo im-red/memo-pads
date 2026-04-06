@@ -628,7 +628,7 @@ const App: React.FC<AppProps> = ({ notebooks, setNotebooks, memos, setMemos }) =
           </div>
         </div>
 
-        <header className="app-header app-header--main">
+        <header className="app-header">
           <button
             type="button"
             className="menu-trigger-btn"
@@ -636,12 +636,8 @@ const App: React.FC<AppProps> = ({ notebooks, setNotebooks, memos, setMemos }) =
           >
             ☰
           </button>
-          <div className="header-content">
-            <p className="eyebrow">Vocabulary Book</p>
+          <div className="header-title">
             <h1>Memo Pads</h1>
-            <p className="subtitle">
-              Organize your vocabulary with notebooks.
-            </p>
           </div>
         </header>
 
@@ -699,7 +695,7 @@ const App: React.FC<AppProps> = ({ notebooks, setNotebooks, memos, setMemos }) =
 
   return (
     <div className="app-shell">
-      <header className="app-header app-header--compact">
+      <header className="app-header">
         <button
           type="button"
           className="back-btn"
@@ -707,7 +703,7 @@ const App: React.FC<AppProps> = ({ notebooks, setNotebooks, memos, setMemos }) =
         >
           ← Back
         </button>
-        <div className="notebook-title">
+        <div className="header-title">
           <h1>{selectedNotebook?.name}</h1>
           <p className="memo-count">{notebookMemos.length} memos</p>
         </div>

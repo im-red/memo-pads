@@ -26,7 +26,7 @@ async function addMemo(page: any, originalText: string, explanation: string) {
 
 async function goBackToNotebookList(page: any) {
   await page.click('button:has-text("← Back")');
-  await page.waitForSelector('.app-header:not(.app-header--compact)', { state: 'visible' });
+  await page.waitForSelector('h1:has-text("Memo Pads")', { state: 'visible' });
 }
 
 async function openSideMenu(page: any) {
@@ -52,7 +52,7 @@ test.describe('ExportOverlay', () => {
     await createNotebook(page, 'Test Notebook 1');
 
     await page.click('button:has-text("Test Notebook 1")');
-    await page.waitForSelector('.app-header--compact', { state: 'visible' });
+    await page.waitForSelector('.back-btn', { state: 'visible' });
     await addMemo(page, 'Test memo text', 'Test explanation');
 
     await goBackToNotebookList(page);
@@ -217,7 +217,7 @@ test.describe('ExportOverlay', () => {
     await createNotebook(page, 'Preview Update Test');
 
     await page.click('button:has-text("Preview Update Test")');
-    await page.waitForSelector('.app-header--compact', { state: 'visible' });
+    await page.waitForSelector('.back-btn', { state: 'visible' });
     await addMemo(page, 'Memo 1', 'Explanation 1');
 
     await goBackToNotebookList(page);
@@ -705,7 +705,7 @@ test.describe('ImportOverlay', () => {
     });
 
     await page.click('button:has-text("Duplicate Test Notebook")');
-    await page.waitForSelector('.app-header--compact', { state: 'visible' });
+    await page.waitForSelector('.back-btn', { state: 'visible' });
     await addMemo(page, 'Duplicate Memo', 'Duplicate Explanation');
 
     await goBackToNotebookList(page);
