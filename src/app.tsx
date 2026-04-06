@@ -97,11 +97,64 @@ const App: React.FC<AppProps> = ({ notebooks, setNotebooks, memos, setMemos }) =
   }, [isSideMenuOpen]);
 
   useEffect(() => {
+    if (!isSideMenuOpen || !sideMenuRef.current) return;
+
+    const sideMenu = sideMenuRef.current;
+    let startX = 0;
+    let currentX = 0;
+    let isDragging = false;
+
+    const handleTouchStart = (e: TouchEvent) => {
+      startX = e.touches[0].clientX;
+      currentX = startX;
+      isDragging = true;
+    };
+
+    const handleTouchMove = (e: TouchEvent) => {
+      if (!isDragging) return;
+      currentX = e.touches[0].clientX;
+      const diff = currentX - startX;
+      if (diff < 0) {
+        const menuWidth = sideMenu.offsetWidth;
+        const translateX = Math.max(diff, -menuWidth);
+        sideMenu.style.transform = `translateX(${translateX}px)`;
+        sideMenu.style.transition = 'none';
+      }
+    };
+
+    const handleTouchEnd = () => {
+      if (!isDragging) return;
+      isDragging = false;
+      const diff = currentX - startX;
+      const menuWidth = sideMenu.offsetWidth;
+      sideMenu.style.transition = '';
+      sideMenu.style.transform = '';
+      if (diff < -menuWidth * 0.3) {
+        setIsSideMenuOpen(false);
+      }
+    };
+
+    sideMenu.addEventListener('touchstart', handleTouchStart, { passive: true });
+    sideMenu.addEventListener('touchmove', handleTouchMove, { passive: true });
+    sideMenu.addEventListener('touchend', handleTouchEnd);
+
+    return () => {
+      sideMenu.removeEventListener('touchstart', handleTouchStart);
+      sideMenu.removeEventListener('touchmove', handleTouchMove);
+      sideMenu.removeEventListener('touchend', handleTouchEnd);
+    };
+  }, [isSideMenuOpen]);
+
+  useEffect(() => {
     let listener: PluginListenerHandle | undefined;
     let cancelled = false;
 
     const setup = async () => {
       const handle = await CapacitorApp.addListener('backButton', ({ canGoBack }) => {
+        if (isSideMenuOpen) {
+          setIsSideMenuOpen(false);
+          return;
+        }
         if (isAddMemoOpen) {
           setIsAddMemoOpen(false);
           setEditMemo(null);
@@ -121,6 +174,10 @@ const App: React.FC<AppProps> = ({ notebooks, setNotebooks, memos, setMemos }) =
         }
         if (isWeReadImportOpen) {
           setIsWeReadImportOpen(false);
+          return;
+        }
+        if (isTrashBinPageOpen) {
+          setIsTrashBinPageOpen(false);
           return;
         }
         if (selectedNotebookId) {
@@ -149,7 +206,7 @@ const App: React.FC<AppProps> = ({ notebooks, setNotebooks, memos, setMemos }) =
         listener.remove();
       }
     };
-  }, [isAddMemoOpen, isAddNotebookOpen, isExportOpen, isImportOpen, isWeReadImportOpen, selectedNotebookId]);
+  }, [isSideMenuOpen, isAddMemoOpen, isAddNotebookOpen, isExportOpen, isImportOpen, isWeReadImportOpen, isTrashBinPageOpen, selectedNotebookId]);
 
   const updateProgress = useCallback((notebookId: string, updates: Partial<ViewProgress>) => {
     setViewProgress(prev => ({

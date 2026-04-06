@@ -1,5 +1,9 @@
 # AI Agent Guidelines
 
+## UI Design Guidelines
+
+Always reference STYLE_GUIDE.md before generating any UI or CSS.
+
 ## Testing After File Edits
 
 After editing any source files, always run the relevant tests to verify the changes:
