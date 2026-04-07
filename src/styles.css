@@ -30,9 +30,10 @@ body {
 
 #app,
 .app-shell {
-  min-height: 100vh;
+  height: 100vh;
   display: flex;
   flex-direction: column;
+  overflow: hidden;
 }
 
 .app-header {
@@ -125,6 +126,9 @@ body {
 main {
   flex: 1;
   padding: 2rem 1rem 3rem;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
 }
 
 .container {
@@ -133,6 +137,8 @@ main {
   display: flex;
   flex-direction: column;
   gap: 1.5rem;
+  flex: 1;
+  min-height: 0;
 }
 
 .notebook-list {
@@ -309,6 +315,10 @@ main {
   border-radius: 16px;
   padding: 1rem;
   box-shadow: var(--shadow);
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
 }
 
 .memo-view.empty {
@@ -348,6 +358,10 @@ main {
   border-radius: 16px;
   padding: 1rem;
   margin-bottom: 1rem;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
 }
 
 .memo-card__header {
@@ -363,6 +377,12 @@ main {
   margin-bottom: 1rem;
   line-height: 1.4;
   flex: 1;
+  max-height: 25vh;
+  overflow-y: auto;
+  overflow-x: hidden;
+  -webkit-overflow-scrolling: touch;
+  touch-action: pan-y;
+  word-break: break-word;
 }
 
 .memo-card__menu {
@@ -429,8 +449,11 @@ main {
 }
 
 .memo-card__content {
-  min-height: 80px;
+  flex: 1;
+  min-height: 0;
   cursor: pointer;
+  display: flex;
+  flex-direction: column;
 }
 
 .memo-card__explanation {
@@ -439,6 +462,13 @@ main {
   padding-top: 1rem;
   border-top: 1px solid var(--border-color);
   white-space: pre-line;
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  overflow-x: hidden;
+  -webkit-overflow-scrolling: touch;
+  touch-action: pan-y;
+  word-break: break-word;
 }
 
 .memo-view__controls {
