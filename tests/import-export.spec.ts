@@ -16,7 +16,7 @@ async function createNotebook(page: any, name: string) {
 
 async function addMemo(page: any, originalText: string, explanation: string) {
   await page.waitForSelector('.memo-view', { state: 'visible' });
-  await page.click('button:has-text("Add Your First Memo"), button:has-text("Add Memo")');
+  await page.click('button:has-text("Add Your First Memo"), button.fab--primary');
   await page.waitForSelector('.overlay:has-text("Add New Memo")', { state: 'visible' });
   await page.fill('textarea[placeholder="Enter the word or phrase..."]', originalText);
   await page.fill('textarea[placeholder="Enter the meaning or translation..."]', explanation);

@@ -89,7 +89,10 @@ test.describe('Memo Content Scrolling on Mobile', () => {
     await page.click('.overlay .form-actions button:has-text("Add Memo")');
     await page.waitForTimeout(500);
 
-    await page.click('button:has-text("Show Explanation")');
+    // Enable "Always show explanation" via header menu
+    await page.click('.header-menu-btn');
+    await page.waitForTimeout(200);
+    await page.click('.header-menu-dropdown button:has-text("Always show explanation")');
     await page.waitForTimeout(300);
 
     const explanationElement = page.locator('.memo-card__explanation');
@@ -145,7 +148,10 @@ test.describe('Memo Content Scrolling on Mobile', () => {
     await page.click('.overlay .form-actions button:has-text("Add Memo")');
     await page.waitForTimeout(500);
 
-    await page.click('button:has-text("Show Explanation")');
+    // Enable "Always show explanation" via header menu
+    await page.click('.header-menu-btn');
+    await page.waitForTimeout(200);
+    await page.click('.header-menu-dropdown button:has-text("Always show explanation")');
     await page.waitForTimeout(300);
 
     const viewport = await page.evaluate(() => ({
@@ -251,7 +257,7 @@ test.describe('Memo Content Scrolling on Mobile', () => {
     await page.click('.overlay .form-actions button:has-text("Add Memo")');
     await page.waitForTimeout(500);
 
-    await page.click('.memo-actions button:has-text("+ Add Memo")');
+    await page.click('.fab--primary');
     await page.waitForSelector('.overlay:has-text("Add New Memo")', { state: 'visible' });
     await page.fill('textarea[placeholder="Enter the word or phrase..."]', 'Second Memo');
     await page.fill('textarea[placeholder="Enter the meaning or translation..."]', 'Explanation 2');
@@ -280,6 +286,180 @@ test.describe('Memo Content Scrolling on Mobile', () => {
       expect(newProgressText).toBe('2 / 2');
 
       console.log('✓ Horizontal swipe navigation works with scrollable content');
+    }
+  });
+
+  test('always show explanation menu option toggles correctly', async ({ page }) => {
+    if (!(await isMobile(page))) {
+      test.skip();
+    }
+
+    await page.waitForSelector('.app-header', { state: 'visible' });
+
+    await page.click('button.add-notebook-btn');
+    await page.waitForSelector('.overlay:has-text("New Notebook")', { state: 'visible' });
+    await page.fill('input[placeholder="Enter notebook name..."]', 'Always Show Test');
+    await page.click('button:has-text("Create Notebook")');
+    await page.waitForSelector('.notebook-item:has-text("Always Show Test")', { state: 'visible' });
+
+    await page.click('.notebook-item:has-text("Always Show Test") .notebook-item__btn');
+    await page.waitForSelector('.memo-view', { state: 'visible' });
+
+    await page.click('button:has-text("Add Your First Memo")');
+    await page.waitForSelector('.overlay:has-text("Add New Memo")', { state: 'visible' });
+    await page.fill('textarea[placeholder="Enter the word or phrase..."]', 'Test memo');
+    await page.fill('textarea[placeholder="Enter the meaning or translation..."]', 'Test explanation');
+    await page.click('.overlay .form-actions button:has-text("Add Memo")');
+    await page.waitForTimeout(500);
+
+    // Initially, explanation should be hidden
+    await expect(page.locator('.memo-card__explanation')).not.toBeVisible();
+
+    // Open header menu and enable "Always show explanation"
+    await page.click('.header-menu-btn');
+    await page.waitForTimeout(200);
+
+    // Check that the option is not checked initially
+    const menuItem = page.locator('.header-menu-dropdown button:has-text("Always show explanation")');
+    await expect(menuItem).toBeVisible();
+    const initialText = await menuItem.textContent();
+    expect(initialText).not.toContain('✓');
+
+    // Click to enable
+    await menuItem.click();
+    await page.waitForTimeout(300);
+
+    // Explanation should now be visible
+    await expect(page.locator('.memo-card__explanation')).toBeVisible();
+
+    // Open menu again and verify checkmark
+    await page.click('.header-menu-btn');
+    await page.waitForTimeout(200);
+    const checkedText = await page.locator('.header-menu-dropdown button:has-text("Always show explanation")').textContent();
+    expect(checkedText).toContain('✓');
+
+    console.log('✓ Always show explanation menu option toggles correctly');
+  });
+
+  test('explanation hides on swipe when always show is disabled', async ({ page }) => {
+    if (!(await isMobile(page))) {
+      test.skip();
+    }
+
+    await page.waitForSelector('.app-header', { state: 'visible' });
+
+    await page.click('button.add-notebook-btn');
+    await page.waitForSelector('.overlay:has-text("New Notebook")', { state: 'visible' });
+    await page.fill('input[placeholder="Enter notebook name..."]', 'Swipe Hide Test');
+    await page.click('button:has-text("Create Notebook")');
+    await page.waitForSelector('.notebook-item:has-text("Swipe Hide Test")', { state: 'visible' });
+
+    await page.click('.notebook-item:has-text("Swipe Hide Test") .notebook-item__btn');
+    await page.waitForSelector('.memo-view', { state: 'visible' });
+
+    // Add two memos
+    await page.click('button:has-text("Add Your First Memo")');
+    await page.waitForSelector('.overlay:has-text("Add New Memo")', { state: 'visible' });
+    await page.fill('textarea[placeholder="Enter the word or phrase..."]', 'First memo');
+    await page.fill('textarea[placeholder="Enter the meaning or translation..."]', 'First explanation');
+    await page.click('.overlay .form-actions button:has-text("Add Memo")');
+    await page.waitForTimeout(500);
+
+    await page.click('.fab--primary');
+    await page.waitForSelector('.overlay:has-text("Add New Memo")', { state: 'visible' });
+    await page.fill('textarea[placeholder="Enter the word or phrase..."]', 'Second memo');
+    await page.fill('textarea[placeholder="Enter the meaning or translation..."]', 'Second explanation');
+    await page.click('.overlay .form-actions button:has-text("Add Memo")');
+    await page.waitForTimeout(500);
+
+    // Enable explanation by clicking on card (tap to toggle)
+    await page.click('.memo-card');
+    await page.waitForTimeout(300);
+    await expect(page.locator('.memo-card__explanation')).toBeVisible();
+
+    // Swipe to next memo
+    const memoCard = page.locator('.memo-card');
+    const cardBox = await memoCard.boundingBox();
+    expect(cardBox).not.toBeNull();
+
+    if (cardBox) {
+      const startX = cardBox.x + cardBox.width / 2;
+      const startY = cardBox.y + cardBox.height / 2;
+
+      await page.mouse.move(startX, startY);
+      await page.mouse.down();
+      await page.mouse.move(startX - 200, startY, { steps: 20 });
+      await page.mouse.up();
+
+      await page.waitForTimeout(300);
+
+      // Explanation should be hidden after swipe
+      await expect(page.locator('.memo-card__explanation')).not.toBeVisible();
+
+      console.log('✓ Explanation hides on swipe when always show is disabled');
+    }
+  });
+
+  test('explanation stays visible on swipe when always show is enabled', async ({ page }) => {
+    if (!(await isMobile(page))) {
+      test.skip();
+    }
+
+    await page.waitForSelector('.app-header', { state: 'visible' });
+
+    await page.click('button.add-notebook-btn');
+    await page.waitForSelector('.overlay:has-text("New Notebook")', { state: 'visible' });
+    await page.fill('input[placeholder="Enter notebook name..."]', 'Swipe Keep Test');
+    await page.click('button:has-text("Create Notebook")');
+    await page.waitForSelector('.notebook-item:has-text("Swipe Keep Test")', { state: 'visible' });
+
+    await page.click('.notebook-item:has-text("Swipe Keep Test") .notebook-item__btn');
+    await page.waitForSelector('.memo-view', { state: 'visible' });
+
+    // Add two memos
+    await page.click('button:has-text("Add Your First Memo")');
+    await page.waitForSelector('.overlay:has-text("Add New Memo")', { state: 'visible' });
+    await page.fill('textarea[placeholder="Enter the word or phrase..."]', 'First memo');
+    await page.fill('textarea[placeholder="Enter the meaning or translation..."]', 'First explanation');
+    await page.click('.overlay .form-actions button:has-text("Add Memo")');
+    await page.waitForTimeout(500);
+
+    await page.click('.fab--primary');
+    await page.waitForSelector('.overlay:has-text("Add New Memo")', { state: 'visible' });
+    await page.fill('textarea[placeholder="Enter the word or phrase..."]', 'Second memo');
+    await page.fill('textarea[placeholder="Enter the meaning or translation..."]', 'Second explanation');
+    await page.click('.overlay .form-actions button:has-text("Add Memo")');
+    await page.waitForTimeout(500);
+
+    // Enable "Always show explanation"
+    await page.click('.header-menu-btn');
+    await page.waitForTimeout(200);
+    await page.click('.header-menu-dropdown button:has-text("Always show explanation")');
+    await page.waitForTimeout(300);
+
+    // Explanation should be visible
+    await expect(page.locator('.memo-card__explanation')).toBeVisible();
+
+    // Swipe to next memo
+    const memoCard = page.locator('.memo-card');
+    const cardBox = await memoCard.boundingBox();
+    expect(cardBox).not.toBeNull();
+
+    if (cardBox) {
+      const startX = cardBox.x + cardBox.width / 2;
+      const startY = cardBox.y + cardBox.height / 2;
+
+      await page.mouse.move(startX, startY);
+      await page.mouse.down();
+      await page.mouse.move(startX - 200, startY, { steps: 20 });
+      await page.mouse.up();
+
+      await page.waitForTimeout(300);
+
+      // Explanation should still be visible after swipe
+      await expect(page.locator('.memo-card__explanation')).toBeVisible();
+
+      console.log('✓ Explanation stays visible on swipe when always show is enabled');
     }
   });
 });

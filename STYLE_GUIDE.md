@@ -49,6 +49,24 @@ AI agents must follow these structural rules to ensure the app doesn't look like
 - **Shadow:** `0 4px 12px rgba(0, 0, 0, 0.05)`. Avoid heavy black shadows.
 - **Interaction:** Cards that are clickable must show a ripple effect or background color change on press.
 
+### Context Menus & Action Sheets
+Context menus must be used for *item-specific actions* only, never for primary navigation.
+
+#### Visual Style
+- **Background:** `--surface` color with a stronger shadow than cards: `0 8px 24px rgba(0,0,0,0.12)`.
+- **Border:** `0.5px solid rgba(0,0,0,0.1)` for definition.
+- **Rounding:** `12px` (slightly more rounded than buttons).
+- **Item Height:** Minimum `44px` for touch accuracy.
+- **Divider:** Use a `1px` subtle line to group related actions (e.g., separating "Edit/Share" from "Delete").
+
+#### Interaction Rules
+- **Trigger:** Use a `vertical-ellipsis` icon for list items or a `settings` icon for page-level actions.
+- **Destructive Actions:** Items like "Delete" or "Remove" must use `--error` (red) text color.
+- **Placement:** 
+    - **Small Menus (1-3 items):** Use a **Popover** that appears near the trigger icon.
+    - **Large Menus (4+ items):** Use a **Bottom Sheet** (a menu that slides up from the bottom of the screen). This is much easier for users to reach with their thumbs.
+- **Dismissal:** Clicking outside the menu or clicking a "Cancel" button must close the menu immediately.
+
 ### Headers
 - **Background:** Use `--primary` color with white text for consistent branding.
 - **Height:** Fixed padding of `1rem` (16px) on all sides. Total height should be compact (~60-70px including safe area).

@@ -31,4 +31,5 @@ export interface ViewProgress {
   notebookId: string;
   currentMemoId: string | null;
   showExplanation: boolean;
+  alwaysShowExplanation?: boolean;
 }

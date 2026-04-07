@@ -16,7 +16,7 @@ async function createNotebook(page: any, name: string) {
 
 async function addMemo(page: any, originalText: string, explanation: string) {
   await page.waitForSelector('.memo-view', { state: 'visible' });
-  await page.click('button:has-text("Add Your First Memo"), button.add-memo-btn');
+  await page.click('button:has-text("Add Your First Memo"), button.fab--primary');
   await page.waitForSelector('.overlay:has-text("Add New Memo")', { state: 'visible' });
   await page.fill('textarea[placeholder="Enter the word or phrase..."]', originalText);
   await page.fill('textarea[placeholder="Enter the meaning or translation..."]', explanation);
@@ -252,7 +252,18 @@ test.describe('Local Soft Delete - Memos', () => {
     await addMemo(page, 'Visible Memo', 'This stays');
     await addMemo(page, 'Hidden Memo', 'This goes');
 
-    await page.click('button:has-text("Next")');
+    // Swipe to next memo
+    const memoCard = page.locator('.memo-card');
+    const cardBox = await memoCard.boundingBox();
+    if (cardBox) {
+      const startX = cardBox.x + cardBox.width / 2;
+      const startY = cardBox.y + cardBox.height / 2;
+      await page.mouse.move(startX, startY);
+      await page.mouse.down();
+      await page.mouse.move(startX - 200, startY, { steps: 20 });
+      await page.mouse.up();
+      await page.waitForTimeout(300);
+    }
 
     await expect(page.locator('.memo-card__original')).toHaveText('Hidden Memo');
 
@@ -649,7 +660,7 @@ test.describe('Deletion Edge Cases', () => {
 
     await page.waitForSelector('.memo-card', { state: 'hidden' });
 
-    await expect(page.locator('button:has-text("Add Your First Memo"), button.add-memo-btn')).toBeVisible();
+    await expect(page.locator('button:has-text("Add Your First Memo"), button.fab--primary')).toBeVisible();
   });
 
   test('deleting notebook clears view progress', async ({ page }) => {

@@ -24,7 +24,11 @@ test('clicking memo card menu does not toggle explanation visibility', async ({ 
 
   await page.waitForSelector('.memo-card__menu-btn', { state: 'visible' });
 
-  await page.click('button:has-text("Show Explanation")');
+  // Enable "Always show explanation" via header menu
+  await page.click('.header-menu-btn');
+  await page.waitForTimeout(200);
+  await page.click('.header-menu-dropdown button:has-text("Always show explanation")');
+  await page.waitForTimeout(300);
 
   const explanation = page.locator('.memo-card__explanation');
   await expect(explanation).toBeVisible();

@@ -5,6 +5,7 @@ import { useState, useRef, useEffect } from 'react';
 interface MemoListProps {
   memos: Memo[];
   showExplanation: boolean;
+  alwaysShowExplanation: boolean;
   currentMemoId: string | null;
   onToggleExplanation: () => void;
   onNavigate: (memoId: string) => void;
@@ -17,6 +18,7 @@ interface MemoListProps {
 const MemoList = ({
   memos,
   showExplanation,
+  alwaysShowExplanation,
   currentMemoId,
   onToggleExplanation,
   onNavigate,
@@ -160,6 +162,12 @@ const MemoList = ({
         const slideOutX = direction === 'next' ? -500 : 500;
         cardRef.current.style.transform = `translateX(${slideOutX}px)`;
       }
+
+      // Hide explanation when swiping if alwaysShowExplanation is not enabled
+      if (!alwaysShowExplanation && showExplanation) {
+        onToggleExplanation();
+      }
+
       setTimeout(() => {
         if (direction === 'prev' && currentIndex > 0) {
           onNavigate(memos[currentIndex - 1].id);
@@ -277,48 +285,23 @@ const MemoList = ({
         </div>
       </div>
 
-      <div className="memo-view__controls">
-        <button
-          type="button"
-          className={clsx('nav-btn', { disabled: !canGoPrev })}
-          onClick={() => canGoPrev && onNavigate(memos[currentIndex - 1].id)}
-          disabled={!canGoPrev}
-        >
-          ← Prev
-        </button>
-
-        <button
-          type="button"
-          className={clsx('toggle-btn', { active: showExplanation })}
-          onClick={onToggleExplanation}
-        >
-          {showExplanation ? 'Hide' : 'Show'} Explanation
-        </button>
-
-        <button
-          type="button"
-          className={clsx('nav-btn', { disabled: !canGoNext && memos.length <= 1 })}
-          onClick={() => {
-            if (canGoNext) {
-              onNavigate(memos[currentIndex + 1].id);
-            } else if (currentIndex === memos.length - 1) {
-              onNavigate(memos[0].id);
-            }
-          }}
-          disabled={!canGoNext && memos.length <= 1}
-        >
-          {canGoNext ? 'Next →' : currentIndex === memos.length - 1 ? '↻ Reset' : 'Next →'}
-        </button>
-      </div>
-
-      <div className="memo-actions">
-        <button type="button" className="add-memo-btn" onClick={onAdd}>
-          + Add Memo
-        </button>
-        <button type="button" className="btn-icon" onClick={onPaste} title="Paste from clipboard">
-          📋
-        </button>
-      </div>
+      {/* Floating Action Buttons */}
+      <button
+        type="button"
+        className="fab fab--primary"
+        onClick={onAdd}
+        aria-label="Add memo"
+      >
+        +
+      </button>
+      <button
+        type="button"
+        className="fab fab--secondary"
+        onClick={onPaste}
+        aria-label="Paste from clipboard"
+      >
+        📋
+      </button>
     </div>
   );
 };

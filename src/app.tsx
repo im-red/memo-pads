@@ -51,10 +51,13 @@ const App: React.FC<AppProps> = ({ notebooks, setNotebooks, memos, setMemos }) =
   const [isWeReadImportOpen, setIsWeReadImportOpen] = useState(false);
   const [isTrashBinPageOpen, setIsTrashBinPageOpen] = useState(false);
   const [isSideMenuOpen, setIsSideMenuOpen] = useState(false);
+  const [isHeaderMenuOpen, setIsHeaderMenuOpen] = useState(false);
   const sideMenuRef = useRef<HTMLDivElement>(null);
+  const headerMenuRef = useRef<HTMLDivElement>(null);
 
   const currentProgress = selectedNotebookId ? viewProgress[selectedNotebookId] : null;
   const showExplanation = currentProgress?.showExplanation ?? false;
+  const alwaysShowExplanation = currentProgress?.alwaysShowExplanation ?? false;
   const currentMemoId = currentProgress?.currentMemoId ?? null;
 
   const notebookMemos = useMemo(() => {
@@ -87,14 +90,17 @@ const App: React.FC<AppProps> = ({ notebooks, setNotebooks, memos, setMemos }) =
       if (sideMenuRef.current && !sideMenuRef.current.contains(event.target as Node)) {
         setIsSideMenuOpen(false);
       }
+      if (headerMenuRef.current && !headerMenuRef.current.contains(event.target as Node)) {
+        setIsHeaderMenuOpen(false);
+      }
     };
-    if (isSideMenuOpen) {
+    if (isSideMenuOpen || isHeaderMenuOpen) {
       document.addEventListener('mousedown', handleClickOutside);
     }
     return () => {
       document.removeEventListener('mousedown', handleClickOutside);
     };
-  }, [isSideMenuOpen]);
+  }, [isSideMenuOpen, isHeaderMenuOpen]);
 
   useEffect(() => {
     if (!isSideMenuOpen || !sideMenuRef.current) return;
@@ -215,6 +221,7 @@ const App: React.FC<AppProps> = ({ notebooks, setNotebooks, memos, setMemos }) =
         notebookId,
         currentMemoId: null,
         showExplanation: false,
+        alwaysShowExplanation: false,
         ...(prev[notebookId] || {}),
         ...updates
       }
@@ -449,6 +456,16 @@ const App: React.FC<AppProps> = ({ notebooks, setNotebooks, memos, setMemos }) =
       updateProgress(selectedNotebookId, { showExplanation: !showExplanation });
     }
   }, [selectedNotebookId, showExplanation, updateProgress]);
+
+  const handleToggleAlwaysShowExplanation = useCallback(() => {
+    if (selectedNotebookId) {
+      const newAlwaysShowExplanation = !alwaysShowExplanation;
+      updateProgress(selectedNotebookId, {
+        alwaysShowExplanation: newAlwaysShowExplanation,
+        showExplanation: newAlwaysShowExplanation ? true : showExplanation
+      });
+    }
+  }, [selectedNotebookId, alwaysShowExplanation, showExplanation, updateProgress]);
 
   const handleNavigateMemo = useCallback((memoId: string) => {
     if (selectedNotebookId) {
@@ -707,6 +724,28 @@ const App: React.FC<AppProps> = ({ notebooks, setNotebooks, memos, setMemos }) =
           <h1>{selectedNotebook?.name}</h1>
           <p className="memo-count">{notebookMemos.length} memos</p>
         </div>
+        <div className="header-menu" ref={headerMenuRef}>
+          <button
+            type="button"
+            className="header-menu-btn"
+            onClick={() => setIsHeaderMenuOpen(v => !v)}
+          >
+            ⋮
+          </button>
+          {isHeaderMenuOpen && (
+            <div className="header-menu-dropdown">
+              <button
+                type="button"
+                onClick={() => {
+                  handleToggleAlwaysShowExplanation();
+                  setIsHeaderMenuOpen(false);
+                }}
+              >
+                {alwaysShowExplanation ? '✓ ' : ''}Always show explanation
+              </button>
+            </div>
+          )}
+        </div>
       </header>
 
       <main>
@@ -714,6 +753,7 @@ const App: React.FC<AppProps> = ({ notebooks, setNotebooks, memos, setMemos }) =
           <MemoList
             memos={notebookMemos}
             showExplanation={showExplanation}
+            alwaysShowExplanation={alwaysShowExplanation}
             currentMemoId={initialMemoId}
             onToggleExplanation={handleToggleExplanation}
             onNavigate={handleNavigateMemo}
