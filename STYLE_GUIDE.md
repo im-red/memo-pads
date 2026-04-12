@@ -77,6 +77,7 @@ Context menus must be used for *item-specific actions* only, never for primary n
 - **Title Styling:**
   - Font size: `1.25rem` (20px), Semi-bold.
   - Line height: `1.2` for compact vertical spacing.
+  - Text alignment: Left-aligned (not centered).
   - Optional subtitle (e.g., memo count): `0.85rem`, opacity `0.85`.
 - **Navigation Buttons:**
   - Minimum touch target: `44x44px`.
@@ -129,6 +130,92 @@ Context menus must be used for *item-specific actions* only, never for primary n
   - Use `-webkit-overflow-scrolling: touch` for smooth iOS scrolling.
   - Hide scrollbars: `scrollbar-width: none` and `::-webkit-scrollbar { display: none }`.
 - **Z-index:** Use `z-index: 100` for overlay container (below side menu at 999-1000).
+
+### Side Menu (Drawer)
+The side menu provides global navigation and should be used for app-level actions, not item-specific operations.
+
+#### Visual Style
+- **Container:**
+  - Position: `fixed`, anchored to the left edge (`top: 0; left: 0`).
+  - Width: `75%` on desktop, `80%` on mobile, capped at `max-width: 300px` (desktop) or `280px` (mobile).
+  - Height: `100vh` or `100dvh` (dynamic viewport height for mobile browsers).
+  - Background: `var(--background)` (white).
+  - Shadow: `var(--shadow-lg)` for depth.
+  - Z-index: `1000` (above backdrop).
+- **Backdrop:**
+  - Background: `rgba(0, 0, 0, 0.5)` with `backdrop-filter: blur(4px)`.
+  - Z-index: `999` (below menu panel).
+  - Must cover entire screen (`position: fixed; inset: 0`).
+- **Header:**
+  - Background: `var(--primary)` color with white text.
+  - Layout: Flexbox with `justify-content: space-between` and `align-items: center`.
+  - Padding: `1rem` (16px).
+  - Border-bottom: `1px solid var(--border-color)`.
+  - Title: `<h2>` element, font-size `1.25rem`, no margin.
+  - Close Button:
+    - Font-size: `2rem` (typically `×` character).
+    - Touch target: `44x44px`.
+    - No background or border.
+- **Content Area:**
+  - Flex: `1` to fill remaining space.
+  - Overflow: `overflow-y: auto; overflow-x: hidden`.
+  - Padding: `1rem 0` (vertical only).
+  - Scrollbar: Hidden (`scrollbar-width: none` and `::-webkit-scrollbar { display: none }`).
+  - Smooth scrolling: `-webkit-overflow-scrolling: touch`.
+
+#### Menu Items
+- **Height:** Minimum `48px` for touch accuracy.
+- **Width:** `100%`, text left-aligned.
+- **Padding:** `1rem` (16px).
+- **Font-size:** `1rem`.
+- **Layout:** Flexbox with `align-items: center` and `gap: 0.75rem`.
+- **Icons:** Use emoji or icon font, placed before text.
+- **Active State:** Background changes to `var(--surface)` on `:active`.
+- **No Hover:** Do not implement `:hover` styles (irrelevant on mobile).
+
+#### Animation
+- **Open:** Slide in from left using `transform: translateX(-100%)` → `translateX(0)`.
+- **Close:** Slide out to left using `transform: translateX(0)` → `translateX(-100%)`.
+- **Duration:** `0.3s` with `ease` timing.
+- **Performance:** Use `will-change: transform` and hardware-accelerated transforms.
+- **Backdrop:** Fade in animation `0.25s ease`.
+
+#### Interaction Rules
+- **Trigger:** Hamburger icon (`☰`) in the top-left of the header on root screens.
+- **Trigger Button:** Minimum touch target `44x44px`, uses `flex-shrink: 0`.
+- **Open Behavior:**
+  - Backdrop appears first with fade-in.
+  - Menu slides in from left.
+  - Content behind menu is dimmed and non-interactive.
+- **Close Behavior:**
+  - Click/tap on backdrop closes menu.
+  - Click/tap on close button (`×`) closes menu.
+  - Swipe left on menu closes menu (touch gesture).
+  - Android hardware back button closes menu (Capacitor).
+- **Navigation:** When a menu item is clicked, close the menu first, then navigate to the target screen.
+- **Disabled on Sub-pages:** On detail/edit pages, replace hamburger with back button and disable side menu.
+
+#### Structure Example
+```html
+{isOpen && <div class="side-menu-backdrop" onClick={closeMenu} />}
+<div class={`side-menu ${isOpen ? 'side-menu--open' : ''}`}>
+  <div class="side-menu-header">
+    <h2>Menu</h2>
+    <button class="side-menu-close">×</button>
+  </div>
+  <div class="side-menu-content">
+    <button class="side-menu-item">🗑️ Trash Bin</button>
+    <button class="side-menu-item">📤 Export Data</button>
+    <button class="side-menu-item">📥 Import Data</button>
+  </div>
+</div>
+```
+
+#### Z-index Hierarchy
+- Side Menu Panel: `z-index: 1000`
+- Side Menu Backdrop: `z-index: 999`
+- Overlays/Modals: `z-index: 100`
+- Regular Content: `z-index: auto` or lower
 
 ## Navigation & Transitions
 
