@@ -21,7 +21,7 @@
 
 body {
   font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-  background-color: var(--background);
+  background-color: var(--surface);
   color: var(--text-main);
   line-height: 1.5;
   -webkit-font-smoothing: antialiased;
@@ -33,7 +33,17 @@ body {
   height: 100vh;
   display: flex;
   flex-direction: column;
-  overflow: hidden;
+  margin: 0 auto;
+  width: 100%;
+}
+
+@media (min-width: 480px) {
+
+  #app,
+  .app-shell {
+    max-width: 480px;
+    box-shadow: var(--shadow-lg);
+  }
 }
 
 .app-header {
@@ -203,7 +213,7 @@ main {
 }
 
 .container {
-  max-width: 720px;
+  max-width: 100%;
   margin: -2rem auto 0;
   display: flex;
   flex-direction: column;
@@ -217,6 +227,8 @@ main {
   border-radius: 16px;
   padding: 1rem;
   box-shadow: var(--shadow);
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
 }
 
 .notebook-list__header {
@@ -321,6 +333,13 @@ main {
   overflow: hidden;
   z-index: 100;
   margin-top: 0.25rem;
+}
+
+.notebook-item__menu-dropdown--upward {
+  top: auto;
+  bottom: 100%;
+  margin-top: 0;
+  margin-bottom: 0.25rem;
 }
 
 .notebook-item__menu-dropdown button {

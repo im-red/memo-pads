@@ -1,6 +1,6 @@
 import { Notebook } from '../types/memo';
 import clsx from 'clsx';
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect, useCallback } from 'react';
 
 interface NotebookListProps {
   notebooks: Notebook[];
@@ -22,7 +22,31 @@ const NotebookList = ({
   memoCounts
 }: NotebookListProps) => {
   const [openMenuId, setOpenMenuId] = useState<string | null>(null);
+  const [shouldOpenUpward, setShouldOpenUpward] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
+  const listRef = useRef<HTMLDivElement>(null);
+
+  const checkDropdownPosition = useCallback(() => {
+    if (!menuRef.current || !listRef.current) return false;
+
+    const menuRect = menuRef.current.getBoundingClientRect();
+    const listRect = listRef.current.getBoundingClientRect();
+    const dropdownHeight = 100;
+
+    const spaceBelow = listRect.bottom - menuRect.bottom;
+    return spaceBelow < dropdownHeight;
+  }, []);
+
+  const handleMenuToggle = (notebookId: string) => {
+    if (openMenuId === notebookId) {
+      setOpenMenuId(null);
+    } else {
+      setOpenMenuId(notebookId);
+      setTimeout(() => {
+        setShouldOpenUpward(checkDropdownPosition());
+      }, 0);
+    }
+  };
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -49,7 +73,7 @@ const NotebookList = ({
   };
 
   return (
-    <div className="notebook-list">
+    <div className="notebook-list" ref={listRef}>
       <div className="notebook-list__header">
         <h2>Notebooks</h2>
         <button
@@ -83,13 +107,15 @@ const NotebookList = ({
               <button
                 type="button"
                 className="notebook-item__menu-btn"
-                onClick={() => setOpenMenuId(openMenuId === notebook.id ? null : notebook.id)}
+                onClick={() => handleMenuToggle(notebook.id)}
                 aria-label="Notebook menu"
               >
                 ⋮
               </button>
               {openMenuId === notebook.id && (
-                <div className="notebook-item__menu-dropdown">
+                <div className={clsx('notebook-item__menu-dropdown', {
+                  'notebook-item__menu-dropdown--upward': shouldOpenUpward
+                })}>
                   <button type="button" onClick={() => handleEdit(notebook)}>
                     Edit
                   </button>
