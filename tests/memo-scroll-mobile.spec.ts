@@ -37,10 +37,10 @@ test.describe('Memo Content Scrolling on Mobile', () => {
     await page.click('.overlay .form-actions button:has-text("Add Memo")');
     await page.waitForTimeout(500);
 
-    const originalTextElement = page.locator('.memo-card__original');
-    await expect(originalTextElement).toBeVisible();
+    const contentElement = page.locator('.memo-card__content');
+    await expect(contentElement).toBeVisible();
 
-    const scrollInfo = await originalTextElement.evaluate((el) => {
+    const scrollInfo = await contentElement.evaluate((el) => {
       const style = window.getComputedStyle(el);
       return {
         scrollHeight: el.scrollHeight,
@@ -54,11 +54,11 @@ test.describe('Memo Content Scrolling on Mobile', () => {
     expect(scrollInfo.overflowY).toBe('auto');
     expect(scrollInfo.hasScroll).toBe(true);
 
-    await originalTextElement.evaluate((el) => {
+    await contentElement.evaluate((el) => {
       el.scrollTop = el.scrollHeight - el.clientHeight;
     });
 
-    const newScrollTop = await originalTextElement.evaluate((el) => el.scrollTop);
+    const newScrollTop = await contentElement.evaluate((el) => el.scrollTop);
     expect(newScrollTop).toBeGreaterThan(0);
 
     console.log('✓ Long memo original text is scrollable on mobile');
@@ -95,10 +95,10 @@ test.describe('Memo Content Scrolling on Mobile', () => {
     await page.click('.header-menu-dropdown button:has-text("Always show explanation")');
     await page.waitForTimeout(300);
 
-    const explanationElement = page.locator('.memo-card__explanation');
-    await expect(explanationElement).toBeVisible();
+    const contentElement = page.locator('.memo-card__content');
+    await expect(contentElement).toBeVisible();
 
-    const scrollInfo = await explanationElement.evaluate((el) => {
+    const scrollInfo = await contentElement.evaluate((el) => {
       const style = window.getComputedStyle(el);
       return {
         scrollHeight: el.scrollHeight,
@@ -112,11 +112,11 @@ test.describe('Memo Content Scrolling on Mobile', () => {
     expect(scrollInfo.overflowY).toBe('auto');
     expect(scrollInfo.hasScroll).toBe(true);
 
-    await explanationElement.evaluate((el) => {
+    await contentElement.evaluate((el) => {
       el.scrollTop = el.scrollHeight - el.clientHeight;
     });
 
-    const newScrollTop = await explanationElement.evaluate((el) => el.scrollTop);
+    const newScrollTop = await contentElement.evaluate((el) => el.scrollTop);
     expect(newScrollTop).toBeGreaterThan(0);
 
     console.log('✓ Long memo explanation is scrollable on mobile');

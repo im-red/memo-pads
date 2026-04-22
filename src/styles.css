@@ -453,13 +453,7 @@ main {
   display: flex;
   flex-direction: column;
   min-height: 0;
-}
-
-.memo-card__header {
-  display: flex;
-  justify-content: space-between;
-  align-items: flex-start;
-  gap: 1rem;
+  position: relative;
 }
 
 .memo-card__original {
@@ -467,18 +461,15 @@ main {
   font-weight: 600;
   margin-bottom: 1rem;
   line-height: 1.4;
-  flex: 1;
-  max-height: 25vh;
-  overflow-y: auto;
-  overflow-x: hidden;
-  -webkit-overflow-scrolling: touch;
-  touch-action: pan-y;
   word-break: break-word;
+  padding-right: 3rem;
 }
 
 .memo-card__menu {
-  position: relative;
-  flex-shrink: 0;
+  position: absolute;
+  top: 1rem;
+  right: 1rem;
+  z-index: 10;
 }
 
 .memo-card__menu-btn {
@@ -544,8 +535,11 @@ main {
   flex: 1;
   min-height: 0;
   cursor: pointer;
-  display: flex;
-  flex-direction: column;
+  display: block;
+  overflow-y: auto;
+  overflow-x: hidden;
+  -webkit-overflow-scrolling: touch;
+  touch-action: pan-y;
 }
 
 .memo-card__explanation {
@@ -554,12 +548,6 @@ main {
   padding-top: 1rem;
   border-top: 1px solid var(--border-color);
   white-space: pre-line;
-  flex: 1;
-  min-height: 0;
-  overflow-y: auto;
-  overflow-x: hidden;
-  -webkit-overflow-scrolling: touch;
-  touch-action: pan-y;
   word-break: break-word;
 }
 
@@ -1184,11 +1172,6 @@ textarea:focus {
     width: 100%;
     min-width: 0;
     box-sizing: border-box;
-  }
-
-  .memo-card__header {
-    width: 100%;
-    min-width: 0;
   }
 
   .memo-card__original {

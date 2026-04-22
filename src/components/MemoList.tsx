@@ -256,29 +256,27 @@ const MemoList = ({
         onPointerUp={handlePointerUp}
         onPointerCancel={handlePointerCancel}
       >
-        <div className="memo-card__header">
-          <p className="memo-card__original">{currentMemo?.originalText}</p>
-          <div className="memo-card__menu" ref={menuRef}>
-            <button
-              type="button"
-              className="memo-card__menu-btn"
-              onClick={() => setIsMenuOpen(v => !v)}
-            >
-              ⋮
-            </button>
-            {isMenuOpen && (
-              <div className="memo-card__menu-dropdown">
-                <button type="button" onClick={handleEdit}>
-                  Edit
-                </button>
-                <button type="button" onClick={handleDelete} className="danger">
-                  Delete
-                </button>
-              </div>
-            )}
-          </div>
+        <div className="memo-card__menu" ref={menuRef}>
+          <button
+            type="button"
+            className="memo-card__menu-btn"
+            onClick={() => setIsMenuOpen(v => !v)}
+          >
+            ⋮
+          </button>
+          {isMenuOpen && (
+            <div className="memo-card__menu-dropdown">
+              <button type="button" onClick={handleEdit}>
+                Edit
+              </button>
+              <button type="button" onClick={handleDelete} className="danger">
+                Delete
+              </button>
+            </div>
+          )}
         </div>
         <div className="memo-card__content">
+          <p className="memo-card__original">{currentMemo?.originalText}</p>
           {showExplanation && (
             <p className="memo-card__explanation">{currentMemo?.explanation}</p>
           )}
