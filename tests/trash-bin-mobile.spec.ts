@@ -116,7 +116,7 @@ test.describe('Trash Bin Mobile UI', () => {
         // Verify it's a full page, not an overlay
         await expect(page.locator('.trash-page-content')).toBeVisible();
         await expect(page.locator('.back-btn')).toBeVisible();
-        await expect(page.locator('button:has-text("← Back")')).toBeVisible();
+        await expect(page.locator('button:has-text("←")')).toBeVisible();
 
         // Verify side menu is closed
         await expect(page.locator('.side-menu--open')).not.toBeVisible();
@@ -161,7 +161,7 @@ test.describe('Trash Bin Mobile UI', () => {
         await page.waitForSelector('.trash-page-content', { state: 'visible' });
 
         // Go back
-        await page.click('button:has-text("← Back")');
+        await page.click('button:has-text("←")');
         await page.waitForSelector('.trash-page-content', { state: 'hidden' });
 
         // Verify we're back at home

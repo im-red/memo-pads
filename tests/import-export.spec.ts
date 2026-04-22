@@ -25,7 +25,7 @@ async function addMemo(page: any, originalText: string, explanation: string) {
 }
 
 async function goBackToNotebookList(page: any) {
-  await page.click('button:has-text("← Back")');
+  await page.click('button:has-text("←")');
   await page.waitForSelector('h1:has-text("Memo Pads")', { state: 'visible' });
 }
 

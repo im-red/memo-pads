@@ -61,7 +61,7 @@ const TrashBinPage: React.FC<TrashBinPageProps> = ({
                     className="back-btn"
                     onClick={onBack}
                 >
-                    ← Back
+                    ←
                 </button>
                 <div className="header-title">
                     <h1>🗑️ Trash Bin</h1>

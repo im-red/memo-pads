@@ -14,6 +14,9 @@ import ExportOverlay from './components/ExportOverlay';
 import ImportOverlay from './components/ImportOverlay';
 import WeReadImportOverlay from './components/WeReadImportOverlay';
 import TrashBinPage from './components/TrashBinPage';
+import SettingsPage from './components/SettingsPage';
+import AboutPage from './components/AboutPage';
+import useAppVersion from './hooks/useAppVersion';
 
 const NOTEBOOKS_KEY = 'memo-pads:notebooks';
 const MEMOS_KEY = 'memo-pads:memos';
@@ -50,10 +53,14 @@ const App: React.FC<AppProps> = ({ notebooks, setNotebooks, memos, setMemos }) =
   const [isImportOpen, setIsImportOpen] = useState(false);
   const [isWeReadImportOpen, setIsWeReadImportOpen] = useState(false);
   const [isTrashBinPageOpen, setIsTrashBinPageOpen] = useState(false);
+  const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+  const [isAboutOpen, setIsAboutOpen] = useState(false);
   const [isSideMenuOpen, setIsSideMenuOpen] = useState(false);
   const [isHeaderMenuOpen, setIsHeaderMenuOpen] = useState(false);
   const sideMenuRef = useRef<HTMLDivElement>(null);
   const headerMenuRef = useRef<HTMLDivElement>(null);
+
+  const { fullString: versionString } = useAppVersion();
 
   const currentProgress = selectedNotebookId ? viewProgress[selectedNotebookId] : null;
   const showExplanation = currentProgress?.showExplanation ?? false;
@@ -186,6 +193,10 @@ const App: React.FC<AppProps> = ({ notebooks, setNotebooks, memos, setMemos }) =
           setIsTrashBinPageOpen(false);
           return;
         }
+        if (isSettingsOpen) {
+          setIsSettingsOpen(false);
+          return;
+        }
         if (selectedNotebookId) {
           setSelectedNotebookId(null);
           return;
@@ -212,7 +223,7 @@ const App: React.FC<AppProps> = ({ notebooks, setNotebooks, memos, setMemos }) =
         listener.remove();
       }
     };
-  }, [isSideMenuOpen, isAddMemoOpen, isAddNotebookOpen, isExportOpen, isImportOpen, isWeReadImportOpen, isTrashBinPageOpen, selectedNotebookId]);
+  }, [isSideMenuOpen, isAddMemoOpen, isAddNotebookOpen, isExportOpen, isImportOpen, isWeReadImportOpen, isTrashBinPageOpen, isSettingsOpen, selectedNotebookId]);
 
   const updateProgress = useCallback((notebookId: string, updates: Partial<ViewProgress>) => {
     setViewProgress(prev => ({
@@ -571,6 +582,27 @@ const App: React.FC<AppProps> = ({ notebooks, setNotebooks, memos, setMemos }) =
     }
   }, [selectedNotebookId, initialMemoId, currentMemoId, updateProgress]);
 
+  if (isAboutOpen) {
+    return (
+      <div className="app-shell">
+        <AboutPage
+          onBack={() => setIsAboutOpen(false)}
+        />
+      </div>
+    );
+  }
+
+  if (isSettingsOpen) {
+    return (
+      <div className="app-shell">
+        <SettingsPage
+          onBack={() => setIsSettingsOpen(false)}
+          onViewAbout={() => setIsAboutOpen(true)}
+        />
+      </div>
+    );
+  }
+
   if (!selectedNotebookId) {
     if (isTrashBinPageOpen) {
       return (
@@ -642,6 +674,21 @@ const App: React.FC<AppProps> = ({ notebooks, setNotebooks, memos, setMemos }) =
             >
               📖 Import WeRead Notes
             </button>
+            <div className="side-menu-divider" />
+            <button
+              type="button"
+              className="side-menu-item"
+              onClick={() => {
+                setIsSettingsOpen(true);
+                setIsSideMenuOpen(false);
+              }}
+            >
+              <span className="side-menu-icon">⚙️</span>
+              <span>Settings</span>
+            </button>
+          </div>
+          <div className="side-menu-footer">
+            {versionString}
           </div>
         </div>
 
@@ -718,7 +765,7 @@ const App: React.FC<AppProps> = ({ notebooks, setNotebooks, memos, setMemos }) =
           className="back-btn"
           onClick={() => setSelectedNotebookId(null)}
         >
-          ← Back
+          ←
         </button>
         <div className="header-title">
           <h1>{selectedNotebook?.name}</h1>

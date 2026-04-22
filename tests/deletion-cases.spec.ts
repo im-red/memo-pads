@@ -25,7 +25,7 @@ async function addMemo(page: any, originalText: string, explanation: string) {
 }
 
 async function goBackToNotebookList(page: any) {
-  await page.click('button:has-text("← Back")');
+  await page.click('button:has-text("←")');
   await page.waitForSelector('h1:has-text("Memo Pads")', { state: 'visible' });
 }
 
@@ -42,7 +42,7 @@ async function openTrashBin(page: any) {
 }
 
 async function closeTrashBin(page: any) {
-  await page.click('button:has-text("← Back")');
+  await page.click('button:has-text("←")');
   await page.waitForSelector('.trash-page-content', { state: 'hidden' });
 }
 
@@ -629,7 +629,7 @@ test.describe('Trash Bin UI', () => {
     await openTrashBin(page);
     await expect(page.locator('.trash-page-content')).toBeVisible();
 
-    await page.click('button:has-text("← Back")');
+    await page.click('button:has-text("←")');
 
     await page.waitForSelector('.trash-page-content', { state: 'hidden' });
     await expect(page.locator('h1:has-text("Memo Pads")')).toBeVisible();

@@ -1,0 +1,35 @@
+<svg width="2732" height="2732" viewBox="0 0 2732 2732" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <filter id="shadow" x="-10%" y="-10%" width="120%" height="120%">
+      <feDropShadow dx="0" dy="8" stdDeviation="12" flood-opacity="0.15" />
+    </filter>
+  </defs>
+
+  <!-- Scale and center the 512x512 original icon content into the 2732x2732 splash canvas -->
+  <!-- scale 2.0 -> 1024x1024. Offset by 854 on both axes to center it. -->
+  <g transform="translate(854, 854) scale(2)">
+    <!-- Notepad back cover -->
+    <rect x="136" y="120" width="240" height="300" rx="20" fill="#E2E8F0" filter="url(#shadow)" />
+    
+    <!-- Notepad pages -->
+    <rect x="136" y="136" width="240" height="284" rx="16" fill="#F8FAFC" />
+    <rect x="136" y="152" width="240" height="268" rx="12" fill="#FFFFFF" />
+
+    <!-- Notebook binding spiral/rings -->
+    <path d="M168 112v40 M212 112v40 M256 112v40 M300 112v40 M344 112v40" 
+          stroke="#94A3B8" stroke-width="16" stroke-linecap="round" />
+
+    <!-- Lines on the pad -->
+    <line x1="176" y1="220" x2="336" y2="220" stroke="#CBD5E1" stroke-width="8" stroke-linecap="round" />
+    <line x1="176" y1="260" x2="336" y2="260" stroke="#CBD5E1" stroke-width="8" stroke-linecap="round" />
+    <line x1="176" y1="300" x2="300" y2="300" stroke="#CBD5E1" stroke-width="8" stroke-linecap="round" />
+    
+    <!-- Stylized Pencil/Pen -->
+    <g transform="translate(48, 48)">
+      <path d="M260 280 l60 -60 l24 24 l-60 60 z" fill="#FBBF24" />
+      <path d="M320 220 l16 -16 c6 -6 16 -6 22 0 l6 6 c6 6 6 16 0 22 l-16 16 z" fill="#F87171" />
+      <path d="M260 280 l-24 32 l32 -24 z" fill="#FCD34D" />
+      <path d="M236 312 l8 -8 l-4 -4 z" fill="#334155" />
+    </g>
+  </g>
+</svg>
