@@ -1,11 +1,5 @@
 import { defineConfig, devices } from '@playwright/test';
-import * as dotenv from 'dotenv';
 import * as path from 'path';
-
-const envPath = path.join(__dirname, 'tests', '.env');
-if (require('fs').existsSync(envPath)) {
-  dotenv.config({ path: envPath });
-}
 
 export default defineConfig({
   testDir: './tests',

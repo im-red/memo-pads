@@ -251,7 +251,7 @@ test.describe('ExportOverlay', () => {
     await page.locator('.overlay-panel button.btn-primary:has-text("Export")').click();
     const download = await downloadPromise;
 
-    expect(download.suggestedFilename()).toContain('memo-pads-');
+    expect(download.suggestedFilename()).toContain('memo_pads_');
     expect(download.suggestedFilename()).toContain('.json');
   });
 });

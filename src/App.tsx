@@ -501,9 +501,12 @@ const App: React.FC<AppProps> = ({ notebooks, setNotebooks, memos, setMemos }) =
     };
     const dataStr = JSON.stringify(data, null, 2);
 
+    const now = new Date();
+    const dateString = `${now.getFullYear()}${String(now.getMonth() + 1).padStart(2, '0')}${String(now.getDate()).padStart(2, '0')}_${String(now.getHours()).padStart(2, '0')}${String(now.getMinutes()).padStart(2, '0')}${String(now.getSeconds()).padStart(2, '0')}`;
+    const fileName = `memo_pads_${dateString}.json`;
+
     if (Capacitor.isNativePlatform()) {
       try {
-        const fileName = `memo-pads-${Date.now()}.json`;
         await Filesystem.writeFile({
           path: fileName,
           data: dataStr,
@@ -520,7 +523,7 @@ const App: React.FC<AppProps> = ({ notebooks, setNotebooks, memos, setMemos }) =
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
-      a.download = `memo-pads-${Date.now()}.json`;
+      a.download = fileName;
       a.click();
       URL.revokeObjectURL(url);
     }
