@@ -641,8 +641,8 @@ const App: React.FC<AppProps> = ({ notebooks, setNotebooks, memos, setMemos }) =
               type="button"
               className="side-menu-item"
               onClick={() => {
-                setIsTrashBinPageOpen(true);
                 setIsSideMenuOpen(false);
+                setIsTrashBinPageOpen(true);
               }}
             >
               🗑️ Trash Bin
@@ -651,8 +651,8 @@ const App: React.FC<AppProps> = ({ notebooks, setNotebooks, memos, setMemos }) =
               type="button"
               className="side-menu-item"
               onClick={() => {
-                setIsExportOpen(true);
                 setIsSideMenuOpen(false);
+                setIsExportOpen(true);
               }}
             >
               📤 Export Data
@@ -661,8 +661,8 @@ const App: React.FC<AppProps> = ({ notebooks, setNotebooks, memos, setMemos }) =
               type="button"
               className="side-menu-item"
               onClick={() => {
-                setIsImportOpen(true);
                 setIsSideMenuOpen(false);
+                setIsImportOpen(true);
               }}
             >
               📥 Import Data
@@ -671,8 +671,8 @@ const App: React.FC<AppProps> = ({ notebooks, setNotebooks, memos, setMemos }) =
               type="button"
               className="side-menu-item"
               onClick={() => {
-                setIsWeReadImportOpen(true);
                 setIsSideMenuOpen(false);
+                setIsWeReadImportOpen(true);
               }}
             >
               📖 Import WeRead Notes
@@ -682,12 +682,11 @@ const App: React.FC<AppProps> = ({ notebooks, setNotebooks, memos, setMemos }) =
               type="button"
               className="side-menu-item"
               onClick={() => {
-                setIsSettingsOpen(true);
                 setIsSideMenuOpen(false);
+                setIsSettingsOpen(true);
               }}
             >
-              <span className="side-menu-icon">⚙️</span>
-              <span>Settings</span>
+              ⚙️ Settings
             </button>
           </div>
           <div className="side-menu-footer">
