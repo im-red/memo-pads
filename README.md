@@ -34,8 +34,8 @@ Here is a quick look at the application in action:
 
 1. Clone the repository:
    ```bash
-   git clone https://github.com/im-red/memo_pads.git
-   cd memo_pads
+   git clone https://github.com/im-red/memo-pads.git
+   cd memo-pads
    ```
 
 2. Install dependencies:

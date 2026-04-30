@@ -1,3 +1,4 @@
+import { SplashScreen } from '@capacitor/splash-screen';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Haptics, ImpactStyle } from '@capacitor/haptics';
 import { App as CapacitorApp } from '@capacitor/app';
@@ -93,6 +94,16 @@ const App: React.FC<AppProps> = ({ notebooks, setNotebooks, memos, setMemos }) =
   }, [notebooks]);
 
   useEffect(() => {
+    // Hide splash screen once the app component is mounted
+    const hideSplash = async () => {
+      try {
+        await SplashScreen.hide();
+      } catch (err) {
+        console.warn('Error hiding splash screen', err);
+      }
+    };
+    hideSplash();
+
     const handleClickOutside = (event: MouseEvent) => {
       if (sideMenuRef.current && !sideMenuRef.current.contains(event.target as Node)) {
         setIsSideMenuOpen(false);
@@ -503,7 +514,7 @@ const App: React.FC<AppProps> = ({ notebooks, setNotebooks, memos, setMemos }) =
 
     const now = new Date();
     const dateString = `${now.getFullYear()}${String(now.getMonth() + 1).padStart(2, '0')}${String(now.getDate()).padStart(2, '0')}_${String(now.getHours()).padStart(2, '0')}${String(now.getMinutes()).padStart(2, '0')}${String(now.getSeconds()).padStart(2, '0')}`;
-    const fileName = `memo_pads_${dateString}.json`;
+    const fileName = `memo-pads_${dateString}.json`;
 
     if (Capacitor.isNativePlatform()) {
       try {

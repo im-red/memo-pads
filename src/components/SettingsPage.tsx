@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import useAppVersion from '../hooks/useAppVersion';
 
-const GITHUB_RELEASES_URL = 'https://github.com/im-red/memo_pads/releases';
+const GITHUB_RELEASES_URL = 'https://github.com/im-red/memo-pads/releases';
 
 interface SettingsPageProps {
     onBack: () => void;
@@ -34,7 +34,7 @@ function SettingsPage({ onBack, onViewAbout }: SettingsPageProps) {
     const handleCheckUpdate = async () => {
         setChecking(true);
         try {
-            const response = await fetch('https://api.github.com/repos/im-red/memo_pads/releases/latest');
+            const response = await fetch('https://api.github.com/repos/im-red/memo-pads/releases/latest');
             const data = await response.json();
             const latestVersion = data.tag_name?.replace(/^v/, '') || '';
 

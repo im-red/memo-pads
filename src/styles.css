@@ -2990,6 +2990,12 @@ select {
   border-top: 1px solid var(--surface);
 }
 
+.side-menu-divider {
+  height: 1px;
+  background: var(--surface);
+  margin: 0.5rem 1rem;
+}
+
 /* Settings Page */
 .settings-container {
   display: flex;

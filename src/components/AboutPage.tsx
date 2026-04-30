@@ -1,7 +1,7 @@
 import iconSvg from '../../resources/icon.svg';
 import useAppVersion from '../hooks/useAppVersion';
 
-const GITHUB_REPO_URL = 'https://github.com/im-red/memo_pads';
+const GITHUB_REPO_URL = 'https://github.com/im-red/memo-pads';
 
 interface AboutPageProps {
     onBack: () => void;
