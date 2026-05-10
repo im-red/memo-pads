@@ -1,6 +1,11 @@
-import { useState, useMemo, useRef } from 'react';
-import { Notebook, Memo } from '../types/memo';
-import { computeImportPreview, executeImport } from '../utils/importUtils';
+import React, { useState, useMemo, useRef } from 'react';
+import {
+  IonModal, IonHeader, IonToolbar, IonTitle, IonButtons, IonButton,
+  IonContent, IonList, IonItem, IonCheckbox, IonLabel, IonNote, IonText, IonBadge
+} from '@ionic/react';
+import { Notebook, Memo } from '../models';
+import { computeImportPreview, executeImport } from '../util/importUtils';
+import { useApp } from '../data/AppContext';
 
 interface ImportedData {
   notebooks: Notebook[];
@@ -9,19 +14,11 @@ interface ImportedData {
 
 interface ImportOverlayProps {
   isOpen: boolean;
-  existingNotebooks: Notebook[];
-  existingMemos: Memo[];
   onClose: () => void;
-  onImport: (newNotebooks: Notebook[], newMemos: Memo[], updatedNotebooks: Notebook[]) => void;
 }
 
-const ImportOverlay = ({
-  isOpen,
-  existingNotebooks,
-  existingMemos,
-  onClose,
-  onImport
-}: ImportOverlayProps) => {
+const ImportOverlay: React.FC<ImportOverlayProps> = ({ isOpen, onClose }) => {
+  const { notebooks: existingNotebooks, memos: existingMemos, importData } = useApp();
   const [importedData, setImportedData] = useState<ImportedData | null>(null);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [error, setError] = useState<string | null>(null);
@@ -109,10 +106,11 @@ const ImportOverlay = ({
       existingMemos
     );
 
-    onImport(result.newNotebooks, result.newMemos, result.updatedNotebooks);
+    importData(result.newNotebooks, result.newMemos, result.updatedNotebooks);
     setImportedData(null);
     setSelectedIds(new Set());
     setError(null);
+    onClose();
   };
 
   const handleClose = () => {
@@ -136,21 +134,19 @@ const ImportOverlay = ({
     return existingByName ? 'existing' : 'new';
   };
 
-  if (!isOpen) return null;
-
   return (
-    <div className="overlay">
-      <div className="overlay-backdrop" onClick={handleClose} />
-      <div className="overlay-panel">
-        <div className="overlay-header">
-          <h2>Import Data</h2>
-          <button type="button" className="overlay-close" onClick={handleClose}>
-            ×
-          </button>
-        </div>
-
+    <IonModal isOpen={isOpen} onDidDismiss={handleClose}>
+      <IonHeader>
+        <IonToolbar>
+          <IonTitle>Import Data</IonTitle>
+          <IonButtons slot="end">
+            <IonButton onClick={handleClose}>Close</IonButton>
+          </IonButtons>
+        </IonToolbar>
+      </IonHeader>
+      <IonContent className="ion-padding">
         {!importedData ? (
-          <div className="import-file-section">
+          <div className="ion-text-center ion-padding">
             <input
               ref={fileInputRef}
               type="file"
@@ -158,81 +154,72 @@ const ImportOverlay = ({
               style={{ display: 'none' }}
               onChange={handleFileChange}
             />
-            <button
-              type="button"
-              className="btn-primary"
-              onClick={() => fileInputRef.current?.click()}
-            >
+            <IonButton expand="block" onClick={() => fileInputRef.current?.click()}>
               Select JSON File
-            </button>
-            {error && <p className="form-error">{error}</p>}
+            </IonButton>
+            {error && <IonText color="danger"><p>{error}</p></IonText>}
           </div>
         ) : (
           <>
-            <div className="export-select-actions">
-              <button type="button" className="select-action-btn" onClick={handleSelectAll}>
-                Select All
-              </button>
-              <button type="button" className="select-action-btn" onClick={handleDeselectAll}>
-                Deselect All
-              </button>
+            <div className="ion-margin-bottom" style={{ display: 'flex', gap: '8px' }}>
+              <IonButton fill="outline" size="small" onClick={handleSelectAll}>Select All</IonButton>
+              <IonButton fill="outline" size="small" onClick={handleDeselectAll}>Deselect All</IonButton>
             </div>
 
-            <div className="export-notebook-list">
+            <IonList>
               {importedData.notebooks.length === 0 ? (
-                <p className="empty-message">No notebooks in file</p>
+                <IonItem lines="none">
+                  <IonLabel className="ion-text-center" color="medium">No notebooks in file</IonLabel>
+                </IonItem>
               ) : (
                 importedData.notebooks.map(notebook => {
                   const status = getNotebookStatus(notebook);
+                  const statusColor = status === 'new' ? 'success' : status === 'update' ? 'warning' : 'medium';
+                  const statusText = status === 'new' ? 'New' : status === 'update' ? 'Update' : 'Existing';
+
                   return (
-                    <label key={notebook.id} className="export-notebook-item">
-                      <input
-                        type="checkbox"
+                    <IonItem key={notebook.id} lines="full" button onClick={() => handleToggle(notebook.id)}>
+                      <IonCheckbox
+                        slot="start"
                         checked={selectedIds.has(notebook.id)}
-                        onChange={() => handleToggle(notebook.id)}
+                        onIonChange={e => e.preventDefault()}
                       />
-                      <span className="export-notebook-name">{notebook.name}</span>
-                      <span className="export-notebook-count">{getMemoCount(notebook.id)} memos</span>
-                      <span className={`import-status import-status--${status}`}>
-                        {status === 'new' ? 'New' : status === 'update' ? 'Update' : 'Existing'}
-                      </span>
-                    </label>
+                      <IonLabel>
+                        <h2>{notebook.name}</h2>
+                        <p>{getMemoCount(notebook.id)} memos</p>
+                      </IonLabel>
+                      <IonBadge slot="end" color={statusColor}>{statusText}</IonBadge>
+                    </IonItem>
                   );
                 })
               )}
-            </div>
+            </IonList>
 
             {preview && (
-              <div className="import-preview">
-                <p>
-                  <strong>{preview.newNotebooks}</strong> new notebooks will be created
-                </p>
-                {preview.updatedNotebooks > 0 && (
-                  <p>
-                    <strong>{preview.updatedNotebooks}</strong> notebooks will be renamed
-                  </p>
-                )}
-                <p>
-                  <strong>{preview.newMemos}</strong> new memos will be added
-                </p>
-                <p className={`import-duplicates ${preview.duplicateCount ? 'has-duplicates' : ''}`}>
-                  <strong>{preview.duplicateCount}</strong> duplicate memos will be skipped
-                </p>
+              <div className="ion-margin-top ion-text-center">
+                <IonText color="medium">
+                  <p><strong>{preview.newNotebooks}</strong> new notebooks will be created</p>
+                  {preview.updatedNotebooks > 0 && (
+                    <p><strong>{preview.updatedNotebooks}</strong> notebooks will be renamed</p>
+                  )}
+                  <p><strong>{preview.newMemos}</strong> new memos will be added</p>
+                  <p><strong>{preview.duplicateCount}</strong> duplicate memos will be skipped</p>
+                </IonText>
               </div>
             )}
 
-            <button
-              type="button"
-              className="btn-primary"
+            <IonButton
+              expand="block"
+              className="ion-margin-top"
               onClick={handleImport}
               disabled={selectedIds.size === 0}
             >
               Import {selectedIds.size > 0 ? `(${selectedIds.size} notebooks)` : ''}
-            </button>
+            </IonButton>
           </>
         )}
-      </div>
-    </div>
+      </IonContent>
+    </IonModal>
   );
 };
 

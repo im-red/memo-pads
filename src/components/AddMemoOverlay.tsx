@@ -1,6 +1,11 @@
-import { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Clipboard } from '@capacitor/clipboard';
-import { Memo } from '../types/memo';
+import {
+  IonModal, IonHeader, IonToolbar, IonTitle, IonButtons, IonButton,
+  IonContent, IonList, IonItem, IonTextarea, IonText, IonIcon
+} from '@ionic/react';
+import { clipboardOutline, swapVerticalOutline } from 'ionicons/icons';
+import { Memo } from '../models';
 
 interface AddMemoOverlayProps {
   isOpen: boolean;
@@ -11,14 +16,14 @@ interface AddMemoOverlayProps {
   openMode?: 'add' | 'paste';
 }
 
-const AddMemoOverlay = ({
+const AddMemoOverlay: React.FC<AddMemoOverlayProps> = ({
   isOpen,
   onClose,
   onSave,
   onEdit,
   editMemo,
   openMode = 'add'
-}: AddMemoOverlayProps) => {
+}) => {
   const [originalText, setOriginalText] = useState('');
   const [explanation, setExplanation] = useState('');
   const [error, setError] = useState('');
@@ -62,8 +67,7 @@ const AddMemoOverlay = ({
     }
   }, [openMode, isOpen, editMemo]);
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleSubmit = async () => {
     if (!originalText.trim()) {
       setError('Original text is required');
       return;
@@ -85,61 +89,70 @@ const AddMemoOverlay = ({
     }
   };
 
-  if (!isOpen) return null;
-
   return (
-    <div className="overlay">
-      <div className="overlay-backdrop" onClick={onClose} />
-      <div className="overlay-panel">
-        <div className="overlay-header">
-          <h2>{editMemo ? 'Edit Memo' : 'Add New Memo'}</h2>
-          <button type="button" className="overlay-close" onClick={onClose}>
-            ×
-          </button>
-        </div>
-
-        <form onSubmit={handleSubmit} className="memo-form">
-          <div className="form-group">
-            <label htmlFor="originalText">Original Text</label>
-            <textarea
-              id="originalText"
-              value={originalText}
-              onChange={e => setOriginalText(e.target.value)}
+    <IonModal isOpen={isOpen} onDidDismiss={onClose}>
+      <IonHeader>
+        <IonToolbar>
+          <IonTitle>{editMemo ? 'Edit Memo' : 'Add New Memo'}</IonTitle>
+          <IonButtons slot="end">
+            <IonButton onClick={onClose}>Cancel</IonButton>
+          </IonButtons>
+        </IonToolbar>
+      </IonHeader>
+      <IonContent className="ion-padding">
+        <IonList>
+          <IonItem lines="full">
+            <IonTextarea
+              label="Original Text"
+              labelPlacement="stacked"
               placeholder="Enter the word or phrase..."
+              value={originalText}
+              onIonInput={e => setOriginalText(e.detail.value!)}
               rows={3}
+              autofocus
             />
+          </IonItem>
+
+          <div className="ion-text-center">
+            <IonButton fill="clear" onClick={handleSwap} title="Swap fields">
+              <IonIcon icon={swapVerticalOutline} slot="icon-only" />
+            </IonButton>
           </div>
 
-          <button type="button" className="btn-swap" onClick={handleSwap} title="Swap fields">
-            ⇅
-          </button>
-
-          <div className="form-group">
-            <label htmlFor="explanation">Explanation</label>
-            <textarea
-              id="explanation"
-              value={explanation}
-              onChange={e => setExplanation(e.target.value)}
+          <IonItem lines="full">
+            <IonTextarea
+              label="Explanation"
+              labelPlacement="stacked"
               placeholder="Enter the meaning or translation..."
+              value={explanation}
+              onIonInput={e => setExplanation(e.detail.value!)}
               rows={3}
             />
-          </div>
+          </IonItem>
+        </IonList>
 
-          {error && <p className="form-error">{error}</p>}
+        {error && (
+          <IonText color="danger" className="ion-padding-start">
+            <p>{error}</p>
+          </IonText>
+        )}
 
-          <div className="form-actions">
-            <button type="submit" className="btn-primary">
-              {editMemo ? 'Save Changes' : 'Add Memo'}
-            </button>
-            {openMode !== 'paste' && (
-              <button type="button" className="btn-icon" onClick={handlePaste} title="Paste from clipboard">
-                📋
-              </button>
-            )}
-          </div>
-        </form>
-      </div>
-    </div>
+        <div className="ion-margin-top" style={{ display: 'flex', gap: '8px' }}>
+          <IonButton
+            expand="block"
+            onClick={handleSubmit}
+            style={{ flex: 1 }}
+          >
+            {editMemo ? 'Save Changes' : 'Add Memo'}
+          </IonButton>
+          {openMode !== 'paste' && (
+            <IonButton fill="outline" onClick={handlePaste} title="Paste from clipboard">
+              <IonIcon icon={clipboardOutline} slot="icon-only" />
+            </IonButton>
+          )}
+        </div>
+      </IonContent>
+    </IonModal>
   );
 };
 

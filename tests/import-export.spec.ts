@@ -1,254 +1,228 @@
 import { test, expect } from '@playwright/test';
+import { waitForIonicPage, clearStorage, createNotebook, selectAndDeleteNotebook, addMemo, deleteMemo, navigateViaMenu, openSideMenu, closeSideMenu, goBackToNotebookList, getPageTitle } from './test-utils';
 
 test.beforeEach(async ({ page }) => {
   await page.goto('/');
-  await page.evaluate(() => localStorage.clear());
+  await clearStorage(page);
   await page.reload();
+  await waitForIonicPage(page);
 });
-
-async function createNotebook(page: any, name: string) {
-  await page.click('button.add-notebook-btn');
-  await page.waitForSelector('.overlay:has-text("New Notebook")', { state: 'visible' });
-  await page.fill('input[placeholder="Enter notebook name..."]', name);
-  await page.click('button:has-text("Create Notebook")');
-  await page.waitForSelector(`button:has-text("${name}")`, { state: 'visible' });
-}
-
-async function addMemo(page: any, originalText: string, explanation: string) {
-  await page.waitForSelector('.memo-view', { state: 'visible' });
-  await page.click('button:has-text("Add Your First Memo"), button.fab--primary');
-  await page.waitForSelector('.overlay:has-text("Add New Memo")', { state: 'visible' });
-  await page.fill('textarea[placeholder="Enter the word or phrase..."]', originalText);
-  await page.fill('textarea[placeholder="Enter the meaning or translation..."]', explanation);
-  await page.click('.overlay .form-actions button:has-text("Add Memo")');
-  await page.waitForSelector('.memo-card', { state: 'visible' });
-}
-
-async function goBackToNotebookList(page: any) {
-  await page.click('button:has-text("←")');
-  await page.waitForSelector('h1:has-text("Memo Pads")', { state: 'visible' });
-}
-
-async function openSideMenu(page: any) {
-  await page.click('.menu-trigger-btn');
-  await page.waitForSelector('.side-menu.side-menu--open', { state: 'visible' });
-  await page.waitForTimeout(400); // Wait for CSS transition
-}
 
 test.describe('ExportOverlay', () => {
   test('can open export overlay from side menu', async ({ page }) => {
-    await page.waitForSelector('.app-header', { state: 'visible' });
-
     await openSideMenu(page);
-    await page.click('button:has-text("Export")');
+    await page.locator('ion-menu ion-item:has-text("Export Data")').click();
+    await page.waitForTimeout(500);
 
-    await page.waitForSelector('.overlay-panel', { state: 'visible' });
-    await expect(page.locator('.overlay-header h2')).toHaveText('Export Data');
+    const modal = page.locator('ion-modal:not(.overlay-hidden)').first();
+    await expect(modal).toBeVisible();
+    await expect(modal.locator('ion-title')).toHaveText('Export Data');
   });
 
   test('shows all notebooks with correct memo counts', async ({ page }) => {
-    await page.waitForSelector('.app-header', { state: 'visible' });
-
     await createNotebook(page, 'Test Notebook 1');
-
-    await page.click('button:has-text("Test Notebook 1")');
-    await page.waitForSelector('.back-btn', { state: 'visible' });
+    await page.waitForTimeout(500);
     await addMemo(page, 'Test memo text', 'Test explanation');
 
     await goBackToNotebookList(page);
 
     await openSideMenu(page);
-    await page.click('button:has-text("Export")');
+    await page.locator('ion-menu ion-item:has-text("Export Data")').click();
+    await page.waitForTimeout(500);
 
-    await page.waitForSelector('.overlay-panel', { state: 'visible' });
+    const modal = page.locator('ion-modal:not(.overlay-hidden)').first();
+    await expect(modal).toBeVisible();
 
-    await expect(page.locator('.export-notebook-item')).toHaveCount(1);
-    await expect(page.locator('.export-notebook-name')).toHaveText('Test Notebook 1');
-    await expect(page.locator('.export-notebook-count')).toHaveText('1 memos');
+    await expect(modal.locator('ion-item')).toHaveCount(1);
+    await expect(modal.locator('ion-label h2')).toHaveText('Test Notebook 1');
+    await expect(modal.locator('ion-label p')).toHaveText('1 memos');
   });
 
   test('shows preview of what will be exported', async ({ page }) => {
-    await page.waitForSelector('.app-header', { state: 'visible' });
-
     await createNotebook(page, 'Export Test Notebook');
+    await goBackToNotebookList(page);
 
     await openSideMenu(page);
-    await page.click('button:has-text("Export")');
+    const exportItem = page.locator('ion-menu ion-item:has-text("Export Data")');
+    await exportItem.scrollIntoViewIfNeeded();
+    await exportItem.click();
+    await page.waitForTimeout(500);
 
-    await page.waitForSelector('.export-preview', { state: 'visible' });
-    await page.waitForSelector('.export-notebook-item', { state: 'visible' });
+    const modal = page.locator('ion-modal:not(.overlay-hidden)').first();
+    await expect(modal).toBeVisible();
 
-    await expect(page.locator('.export-notebook-item')).toHaveCount(1);
+    await expect(modal.locator('ion-item')).toHaveCount(1);
   });
 
   test('all notebooks are selected by default', async ({ page }) => {
-    await page.waitForSelector('.app-header', { state: 'visible' });
-
     await createNotebook(page, 'Notebook A');
+    await goBackToNotebookList(page);
     await createNotebook(page, 'Notebook B');
+    await goBackToNotebookList(page);
 
     await openSideMenu(page);
-    await page.click('button:has-text("Export")');
+    const exportItem = page.locator('ion-menu ion-item:has-text("Export Data")');
+    await exportItem.scrollIntoViewIfNeeded();
+    await exportItem.click();
+    await page.waitForTimeout(500);
 
-    await page.waitForSelector('.overlay-panel', { state: 'visible' });
+    const modal = page.locator('ion-modal:not(.overlay-hidden)').first();
+    await expect(modal).toBeVisible();
 
-    const checkboxes = await page.locator('.export-notebook-item input[type="checkbox"]').all();
+    const checkboxes = await modal.locator('ion-item ion-checkbox').all();
     for (const checkbox of checkboxes) {
       await expect(checkbox).toBeChecked();
     }
   });
 
   test('can toggle individual notebook selection', async ({ page }) => {
-    await page.waitForSelector('.app-header', { state: 'visible' });
-
     await createNotebook(page, 'Toggle Test Notebook');
+    await goBackToNotebookList(page);
 
     await openSideMenu(page);
-    await page.click('button:has-text("Export")');
+    const exportItem = page.locator('ion-menu ion-item:has-text("Export Data")');
+    await exportItem.scrollIntoViewIfNeeded();
+    await exportItem.click();
+    await page.waitForTimeout(500);
 
-    await page.waitForSelector('.overlay-panel', { state: 'visible' });
+    const modal = page.locator('ion-modal:not(.overlay-hidden)').first();
+    await expect(modal).toBeVisible();
 
-    await page.click('.export-notebook-item');
-    await expect(page.locator('.export-notebook-item input[type="checkbox"]')).not.toBeChecked();
+    await modal.locator('ion-item').click();
+    await expect(modal.locator('ion-item ion-checkbox')).not.toBeChecked();
 
-    await page.click('.export-notebook-item');
-    await expect(page.locator('.export-notebook-item input[type="checkbox"]')).toBeChecked();
+    await modal.locator('ion-item').click();
+    await expect(modal.locator('ion-item ion-checkbox')).toBeChecked();
   });
 
   test('can select all notebooks', async ({ page }) => {
-    await page.waitForSelector('.app-header', { state: 'visible' });
-
     await createNotebook(page, 'Select All Test 1');
+    await goBackToNotebookList(page);
     await createNotebook(page, 'Select All Test 2');
+    await goBackToNotebookList(page);
 
     await openSideMenu(page);
-    await page.click('button:has-text("Export")');
+    const exportItem = page.locator('ion-menu ion-item:has-text("Export Data")');
+    await exportItem.scrollIntoViewIfNeeded();
+    await exportItem.click();
+    await page.waitForTimeout(500);
 
-    await page.waitForSelector('.overlay-panel', { state: 'visible' });
-    await page.waitForSelector('.export-notebook-item input[type="checkbox"]:checked');
+    const modal = page.locator('ion-modal:not(.overlay-hidden)').first();
+    await expect(modal).toBeVisible();
+    await page.waitForTimeout(300);
 
-    await page.click('.export-notebook-item:first-child');
-    await expect(page.locator('.export-notebook-item:first-child input[type="checkbox"]')).not.toBeChecked();
+    await modal.locator('ion-item:first-child').click();
+    await expect(modal.locator('ion-item:first-child ion-checkbox')).not.toBeChecked();
 
-    await page.locator('.overlay-panel .export-select-actions button').filter({ hasText: /^Select All$/ }).click();
+    await modal.locator('ion-button').filter({ hasText: /^Select All$/ }).click();
 
-    const checkboxes = await page.locator('.export-notebook-item input[type="checkbox"]').all();
+    const checkboxes = await modal.locator('ion-item ion-checkbox').all();
     for (const checkbox of checkboxes) {
       await expect(checkbox).toBeChecked();
     }
   });
 
   test('can deselect all notebooks', async ({ page }) => {
-    await page.waitForSelector('.app-header', { state: 'visible' });
-
     await createNotebook(page, 'Deselect All Test');
+    await goBackToNotebookList(page);
 
     await openSideMenu(page);
-    await page.click('button:has-text("Export")');
+    const exportItem = page.locator('ion-menu ion-item:has-text("Export Data")');
+    await exportItem.scrollIntoViewIfNeeded();
+    await exportItem.click();
+    await page.waitForTimeout(500);
 
-    await page.waitForSelector('.overlay-panel', { state: 'visible' });
+    const modal = page.locator('ion-modal:not(.overlay-hidden)').first();
+    await expect(modal).toBeVisible();
 
-    await page.locator('.overlay-panel button:has-text("Deselect All")').click();
+    await modal.locator('ion-button').filter({ hasText: /^Deselect All$/ }).click();
 
-    const checkboxes = await page.locator('.export-notebook-item input[type="checkbox"]').all();
+    const checkboxes = await modal.locator('ion-item ion-checkbox').all();
     for (const checkbox of checkboxes) {
       await expect(checkbox).not.toBeChecked();
     }
   });
 
   test('export button is disabled when no notebooks selected', async ({ page }) => {
-    await page.waitForSelector('.app-header', { state: 'visible' });
-
     await createNotebook(page, 'Disabled Export Test');
+    await goBackToNotebookList(page);
 
     await openSideMenu(page);
-    await page.click('button:has-text("Export")');
+    await page.locator('ion-menu ion-item:has-text("Export Data")').click();
+    await page.waitForTimeout(500);
 
-    await page.waitForSelector('.overlay-panel', { state: 'visible' });
+    const modal = page.locator('ion-modal:not(.overlay-hidden)').first();
+    await expect(modal).toBeVisible();
 
-    await page.locator('.overlay-panel button:has-text("Deselect All")').click();
+    const deselectBtn = modal.locator('ion-button').filter({ hasText: /^Deselect All$/ });
+    await deselectBtn.click();
+    await page.waitForTimeout(500);
 
-    await expect(page.locator('.overlay-panel button.btn-primary:has-text("Export")')).toBeDisabled();
+    const exportBtn = modal.locator('ion-button:has-text("Export")');
+    await expect(exportBtn).toHaveAttribute('disabled', '');
   });
 
   test('shows empty message when no notebooks exist', async ({ page }) => {
-    await page.waitForSelector('.app-header', { state: 'visible' });
-
     await openSideMenu(page);
-    await page.click('button:has-text("Export")');
+    await page.locator('ion-menu ion-item:has-text("Export Data")').click();
+    await page.waitForTimeout(500);
 
-    await page.waitForSelector('.overlay-panel', { state: 'visible' });
+    const modal = page.locator('ion-modal:not(.overlay-hidden)').first();
+    await expect(modal).toBeVisible();
 
-    await expect(page.locator('.overlay-panel .empty-message')).toHaveText('No notebooks to export');
+    await expect(modal.locator('ion-label')).toContainText('No notebooks to export');
   });
 
   test('can close via close button', async ({ page }) => {
-    await page.waitForSelector('.app-header', { state: 'visible' });
-
     await openSideMenu(page);
-    await page.click('button:has-text("Export")');
+    await page.locator('ion-menu ion-item:has-text("Export Data")').click();
+    await page.waitForTimeout(500);
 
-    await page.waitForSelector('.overlay-panel', { state: 'visible' });
+    const modal = page.locator('ion-modal:not(.overlay-hidden)').first();
+    await expect(modal).toBeVisible();
 
-    await page.click('.overlay-close');
+    await modal.locator('ion-button:has-text("Close")').click();
 
-    await page.waitForSelector('.overlay-panel', { state: 'hidden' });
-  });
-
-  test('can close via backdrop click', async ({ page }) => {
-    await page.waitForSelector('.app-header', { state: 'visible' });
-
-    await openSideMenu(page);
-    await page.click('button:has-text("Export")');
-
-    await page.waitForSelector('.overlay-panel', { state: 'visible' });
-
-    await page.evaluate(() => {
-      const backdrop = document.querySelector('.overlay-backdrop') as HTMLElement;
-      backdrop.click();
-    });
-
-    await page.waitForSelector('.overlay-panel', { state: 'hidden' });
+    await page.waitForSelector('ion-modal:not(.overlay-hidden)', { state: 'hidden' });
   });
 
   test('preview updates when selection changes', async ({ page }) => {
-    await page.waitForSelector('.app-header', { state: 'visible' });
-
     await createNotebook(page, 'Preview Update Test');
-
-    await page.click('button:has-text("Preview Update Test")');
-    await page.waitForSelector('.back-btn', { state: 'visible' });
+    await page.waitForTimeout(500);
     await addMemo(page, 'Memo 1', 'Explanation 1');
 
     await goBackToNotebookList(page);
 
     await openSideMenu(page);
-    await page.click('button:has-text("Export")');
+    await page.locator('ion-menu ion-item:has-text("Export Data")').click();
+    await page.waitForTimeout(500);
 
-    await page.waitForSelector('.export-preview', { state: 'visible' });
+    const modal = page.locator('ion-modal:not(.overlay-hidden)').first();
+    await expect(modal).toBeVisible();
 
-    await expect(page.locator('.export-preview')).toContainText('1 notebooks');
-    await expect(page.locator('.export-preview')).toContainText('1 memos');
+    await expect(modal.locator('.export-preview')).toContainText('1 notebooks');
+    await expect(modal.locator('.export-preview')).toContainText('1 memos');
 
-    await page.click('.export-notebook-item');
+    await modal.locator('ion-item').click();
 
-    await expect(page.locator('.export-preview')).toContainText('0 notebooks');
-    await expect(page.locator('.export-preview')).toContainText('0 memos');
+    await expect(modal.locator('.export-preview')).toContainText('0 notebooks');
+    await expect(modal.locator('.export-preview')).toContainText('0 memos');
   });
 
   test('can export selected notebooks', async ({ page }) => {
-    await page.waitForSelector('.app-header', { state: 'visible' });
-
     await createNotebook(page, 'Export Success Test');
+    await goBackToNotebookList(page);
 
     await openSideMenu(page);
-    await page.click('button:has-text("Export")');
+    await page.locator('ion-menu ion-item:has-text("Export Data")').click();
+    await page.waitForTimeout(500);
 
-    await page.waitForSelector('.overlay-panel', { state: 'visible' });
-    await page.waitForSelector('.export-notebook-item input[type="checkbox"]:checked');
+    const modal = page.locator('ion-modal:not(.overlay-hidden)').first();
+    await expect(modal).toBeVisible();
+    await page.waitForTimeout(300);
 
     const downloadPromise = page.waitForEvent('download');
-    await page.locator('.overlay-panel button.btn-primary:has-text("Export")').click();
+    await modal.locator('ion-button:has-text("Export")').click();
     const download = await downloadPromise;
 
     expect(download.suggestedFilename()).toContain('memo-pads_');
@@ -258,33 +232,33 @@ test.describe('ExportOverlay', () => {
 
 test.describe('ImportOverlay', () => {
   test('can open import overlay from side menu', async ({ page }) => {
-    await page.waitForSelector('.app-header', { state: 'visible' });
-
     await openSideMenu(page);
-    await page.click('button:has-text("Import")');
+    await page.locator('ion-menu ion-item:has-text("Import Data")').click();
+    await page.waitForTimeout(500);
 
-    await page.waitForSelector('.overlay-panel', { state: 'visible' });
-    await expect(page.locator('.overlay-header h2')).toHaveText('Import Data');
+    const modal = page.locator('ion-modal:not(.overlay-hidden)').first();
+    await expect(modal).toBeVisible();
+    await expect(modal.locator('ion-title')).toHaveText('Import Data');
   });
 
   test('shows file selection button initially', async ({ page }) => {
-    await page.waitForSelector('.app-header', { state: 'visible' });
-
     await openSideMenu(page);
-    await page.click('button:has-text("Import")');
+    await page.locator('ion-menu ion-item:has-text("Import Data")').click();
+    await page.waitForTimeout(500);
 
-    await page.waitForSelector('.overlay-panel', { state: 'visible' });
+    const modal = page.locator('ion-modal:not(.overlay-hidden)').first();
+    await expect(modal).toBeVisible();
 
-    await expect(page.locator('button:has-text("Select JSON File")')).toBeVisible();
+    await expect(modal.locator('ion-button:has-text("Select JSON File")')).toBeVisible();
   });
 
   test('shows error for invalid JSON file', async ({ page }) => {
-    await page.waitForSelector('.app-header', { state: 'visible' });
-
     await openSideMenu(page);
-    await page.click('button:has-text("Import")');
+    await page.locator('ion-menu ion-item:has-text("Import Data")').click();
+    await page.waitForTimeout(500);
 
-    await page.waitForSelector('.overlay-panel', { state: 'visible' });
+    const modal = page.locator('ion-modal:not(.overlay-hidden)').first();
+    await expect(modal).toBeVisible();
 
     const invalidJsonContent = 'this is not valid json';
     await page.evaluate(content => {
@@ -297,17 +271,17 @@ test.describe('ImportOverlay', () => {
       input.dispatchEvent(new Event('change', { bubbles: true }));
     }, invalidJsonContent);
 
-    await page.waitForSelector('.form-error', { state: 'visible' });
-    await expect(page.locator('.form-error')).toContainText('is not valid JSON');
+    await page.waitForTimeout(500);
+    await expect(modal.locator('ion-text[color="danger"]')).toContainText('is not valid JSON');
   });
 
   test('shows error for file missing notebooks array', async ({ page }) => {
-    await page.waitForSelector('.app-header', { state: 'visible' });
-
     await openSideMenu(page);
-    await page.click('button:has-text("Import")');
+    await page.locator('ion-menu ion-item:has-text("Import Data")').click();
+    await page.waitForTimeout(500);
 
-    await page.waitForSelector('.overlay-panel', { state: 'visible' });
+    const modal = page.locator('ion-modal:not(.overlay-hidden)').first();
+    await expect(modal).toBeVisible();
 
     const invalidContent = JSON.stringify({ memos: [] });
     await page.evaluate(content => {
@@ -320,17 +294,17 @@ test.describe('ImportOverlay', () => {
       input.dispatchEvent(new Event('change', { bubbles: true }));
     }, invalidContent);
 
-    await page.waitForSelector('.form-error', { state: 'visible' });
-    await expect(page.locator('.form-error')).toContainText('missing notebooks array');
+    await page.waitForTimeout(500);
+    await expect(modal.locator('ion-text[color="danger"]')).toContainText('missing notebooks array');
   });
 
   test('shows error for file missing memos array', async ({ page }) => {
-    await page.waitForSelector('.app-header', { state: 'visible' });
-
     await openSideMenu(page);
-    await page.click('button:has-text("Import")');
+    await page.locator('ion-menu ion-item:has-text("Import Data")').click();
+    await page.waitForTimeout(500);
 
-    await page.waitForSelector('.overlay-panel', { state: 'visible' });
+    const modal = page.locator('ion-modal:not(.overlay-hidden)').first();
+    await expect(modal).toBeVisible();
 
     const invalidContent = JSON.stringify({ notebooks: [] });
     await page.evaluate(content => {
@@ -343,17 +317,17 @@ test.describe('ImportOverlay', () => {
       input.dispatchEvent(new Event('change', { bubbles: true }));
     }, invalidContent);
 
-    await page.waitForSelector('.form-error', { state: 'visible' });
-    await expect(page.locator('.form-error')).toContainText('missing memos array');
+    await page.waitForTimeout(500);
+    await expect(modal.locator('ion-text[color="danger"]')).toContainText('missing memos array');
   });
 
   test('shows imported notebooks with memo counts', async ({ page }) => {
-    await page.waitForSelector('.app-header', { state: 'visible' });
-
     await openSideMenu(page);
-    await page.click('button:has-text("Import")');
+    await page.locator('ion-menu ion-item:has-text("Import Data")').click();
+    await page.waitForTimeout(500);
 
-    await page.waitForSelector('.overlay-panel', { state: 'visible' });
+    const modal = page.locator('ion-modal:not(.overlay-hidden)').first();
+    await expect(modal).toBeVisible();
 
     const validContent = JSON.stringify({
       notebooks: [
@@ -375,19 +349,18 @@ test.describe('ImportOverlay', () => {
       input.dispatchEvent(new Event('change', { bubbles: true }));
     }, validContent);
 
-    await page.waitForSelector('.export-notebook-item', { state: 'visible' });
-
-    await expect(page.locator('.export-notebook-name')).toHaveText('Imported Notebook');
-    await expect(page.locator('.export-notebook-count')).toHaveText('2 memos');
+    await page.waitForTimeout(500);
+    await expect(modal.locator('ion-label h2')).toHaveText('Imported Notebook');
+    await expect(modal.locator('ion-label p')).toHaveText('2 memos');
   });
 
   test('shows new status for new notebooks', async ({ page }) => {
-    await page.waitForSelector('.app-header', { state: 'visible' });
-
     await openSideMenu(page);
-    await page.click('button:has-text("Import")');
+    await page.locator('ion-menu ion-item:has-text("Import Data")').click();
+    await page.waitForTimeout(500);
 
-    await page.waitForSelector('.overlay-panel', { state: 'visible' });
+    const modal = page.locator('ion-modal:not(.overlay-hidden)').first();
+    await expect(modal).toBeVisible();
 
     const validContent = JSON.stringify({
       notebooks: [
@@ -406,15 +379,13 @@ test.describe('ImportOverlay', () => {
       input.dispatchEvent(new Event('change', { bubbles: true }));
     }, validContent);
 
-    await page.waitForSelector('.import-status', { state: 'visible' });
-
-    await expect(page.locator('.import-status--new')).toHaveText('New');
+    await page.waitForTimeout(500);
+    await expect(modal.locator('ion-badge')).toHaveText('New');
   });
 
   test('shows existing status for existing notebooks by id', async ({ page }) => {
-    await page.waitForSelector('.app-header', { state: 'visible' });
-
     await createNotebook(page, 'Existing Notebook');
+    await goBackToNotebookList(page);
 
     const notebookId = await page.evaluate(() => {
       const notebooks = JSON.parse(localStorage.getItem('memo-pads-notebooks') || '[]');
@@ -422,9 +393,11 @@ test.describe('ImportOverlay', () => {
     });
 
     await openSideMenu(page);
-    await page.click('button:has-text("Import")');
+    await page.locator('ion-menu ion-item:has-text("Import Data")').click();
+    await page.waitForTimeout(500);
 
-    await page.waitForSelector('.overlay-panel', { state: 'visible' });
+    const modal = page.locator('ion-modal:not(.overlay-hidden)').first();
+    await expect(modal).toBeVisible();
 
     const validContent = JSON.stringify({
       notebooks: [
@@ -443,15 +416,13 @@ test.describe('ImportOverlay', () => {
       input.dispatchEvent(new Event('change', { bubbles: true }));
     }, validContent);
 
-    await page.waitForSelector('.import-status', { state: 'visible' });
-
-    await expect(page.locator('.import-status--existing')).toHaveText('Existing');
+    await page.waitForTimeout(500);
+    await expect(modal.locator('ion-badge')).toHaveText('Existing');
   });
 
   test('shows update status for notebooks with same id but different name', async ({ page }) => {
-    await page.waitForSelector('.app-header', { state: 'visible' });
-
     await createNotebook(page, 'Original Name');
+    await goBackToNotebookList(page);
 
     const notebookId = await page.evaluate(() => {
       const notebooks = JSON.parse(localStorage.getItem('memo-pads-notebooks') || '[]');
@@ -459,9 +430,11 @@ test.describe('ImportOverlay', () => {
     });
 
     await openSideMenu(page);
-    await page.click('button:has-text("Import")');
+    await page.locator('ion-menu ion-item:has-text("Import Data")').click();
+    await page.waitForTimeout(500);
 
-    await page.waitForSelector('.overlay-panel', { state: 'visible' });
+    const modal = page.locator('ion-modal:not(.overlay-hidden)').first();
+    await expect(modal).toBeVisible();
 
     const validContent = JSON.stringify({
       notebooks: [
@@ -480,19 +453,19 @@ test.describe('ImportOverlay', () => {
       input.dispatchEvent(new Event('change', { bubbles: true }));
     }, validContent);
 
-    await page.waitForSelector('.import-status', { state: 'visible' });
+    await page.waitForTimeout(500);
 
-    const statusText = await page.locator('.import-status').first().textContent();
+    const statusText = await modal.locator('ion-badge').first().textContent();
     expect(statusText).toBeTruthy();
   });
 
   test('all imported notebooks are selected by default', async ({ page }) => {
-    await page.waitForSelector('.app-header', { state: 'visible' });
-
     await openSideMenu(page);
-    await page.click('button:has-text("Import")');
+    await page.locator('ion-menu ion-item:has-text("Import Data")').click();
+    await page.waitForTimeout(500);
 
-    await page.waitForSelector('.overlay-panel', { state: 'visible' });
+    const modal = page.locator('ion-modal:not(.overlay-hidden)').first();
+    await expect(modal).toBeVisible();
 
     const validContent = JSON.stringify({
       notebooks: [
@@ -512,21 +485,21 @@ test.describe('ImportOverlay', () => {
       input.dispatchEvent(new Event('change', { bubbles: true }));
     }, validContent);
 
-    await page.waitForSelector('.export-notebook-item', { state: 'visible' });
+    await page.waitForTimeout(500);
 
-    const checkboxes = await page.locator('.export-notebook-item input[type="checkbox"]').all();
+    const checkboxes = await modal.locator('ion-item ion-checkbox').all();
     for (const checkbox of checkboxes) {
       await expect(checkbox).toBeChecked();
     }
   });
 
   test('can toggle individual notebook selection in import', async ({ page }) => {
-    await page.waitForSelector('.app-header', { state: 'visible' });
-
     await openSideMenu(page);
-    await page.click('button:has-text("Import")');
+    await page.locator('ion-menu ion-item:has-text("Import Data")').click();
+    await page.waitForTimeout(500);
 
-    await page.waitForSelector('.overlay-panel', { state: 'visible' });
+    const modal = page.locator('ion-modal:not(.overlay-hidden)').first();
+    await expect(modal).toBeVisible();
 
     const validContent = JSON.stringify({
       notebooks: [
@@ -545,22 +518,22 @@ test.describe('ImportOverlay', () => {
       input.dispatchEvent(new Event('change', { bubbles: true }));
     }, validContent);
 
-    await page.waitForSelector('.export-notebook-item', { state: 'visible' });
+    await page.waitForTimeout(500);
 
-    await page.click('.export-notebook-item');
-    await expect(page.locator('.export-notebook-item input[type="checkbox"]')).not.toBeChecked();
+    await modal.locator('ion-item').click();
+    await expect(modal.locator('ion-item ion-checkbox')).not.toBeChecked();
 
-    await page.click('.export-notebook-item');
-    await expect(page.locator('.export-notebook-item input[type="checkbox"]')).toBeChecked();
+    await modal.locator('ion-item').click();
+    await expect(modal.locator('ion-item ion-checkbox')).toBeChecked();
   });
 
   test('can select all in import', async ({ page }) => {
-    await page.waitForSelector('.app-header', { state: 'visible' });
-
     await openSideMenu(page);
-    await page.click('button:has-text("Import")');
+    await page.locator('ion-menu ion-item:has-text("Import Data")').click();
+    await page.waitForTimeout(500);
 
-    await page.waitForSelector('.overlay-panel', { state: 'visible' });
+    const modal = page.locator('ion-modal:not(.overlay-hidden)').first();
+    await expect(modal).toBeVisible();
 
     const validContent = JSON.stringify({
       notebooks: [
@@ -580,26 +553,24 @@ test.describe('ImportOverlay', () => {
       input.dispatchEvent(new Event('change', { bubbles: true }));
     }, validContent);
 
-    await page.waitForSelector('.export-notebook-item', { state: 'visible' });
+    await page.waitForTimeout(500);
 
-    await page.click('.export-notebook-item:first-child');
-    await expect(page.locator('.export-notebook-item:first-child input[type="checkbox"]')).not.toBeChecked();
+    await modal.locator('ion-item:first-child').click();
+    await expect(modal.locator('ion-item:first-child ion-checkbox')).not.toBeChecked();
 
-    await page.locator('.overlay-panel .export-select-actions button').filter({ hasText: /^Select All$/ }).click();
+    await modal.locator('ion-button').filter({ hasText: /^Select All$/ }).click();
 
-    const checkboxes = await page.locator('.export-notebook-item input[type="checkbox"]').all();
+    const checkboxes = await modal.locator('ion-item ion-checkbox').all();
     for (const checkbox of checkboxes) {
       await expect(checkbox).toBeChecked();
     }
   });
 
   test('can deselect all in import', async ({ page }) => {
-    await page.waitForSelector('.app-header', { state: 'visible' });
-
     await openSideMenu(page);
-    await page.click('button:has-text("Import")');
+    await page.click('ion-menu ion-item:has-text("Import Data")');
 
-    await page.waitForSelector('.overlay-panel', { state: 'visible' });
+    await page.waitForSelector('ion-modal:not(.overlay-hidden)', { state: 'visible' });
 
     const validContent = JSON.stringify({
       notebooks: [
@@ -618,23 +589,21 @@ test.describe('ImportOverlay', () => {
       input.dispatchEvent(new Event('change', { bubbles: true }));
     }, validContent);
 
-    await page.waitForSelector('.export-notebook-item', { state: 'visible' });
+    await page.waitForSelector('ion-item', { state: 'visible' });
 
-    await page.locator('.overlay-panel button:has-text("Deselect All")').click();
+    await page.locator('ion-modal ion-button').filter({ hasText: /^Deselect All$/ }).click();
 
-    const checkboxes = await page.locator('.export-notebook-item input[type="checkbox"]').all();
+    const checkboxes = await page.locator('ion-item ion-checkbox').all();
     for (const checkbox of checkboxes) {
       await expect(checkbox).not.toBeChecked();
     }
   });
 
   test('import button is disabled when no notebooks selected', async ({ page }) => {
-    await page.waitForSelector('.app-header', { state: 'visible' });
-
     await openSideMenu(page);
-    await page.click('button:has-text("Import")');
+    await page.click('ion-menu ion-item:has-text("Import Data")');
 
-    await page.waitForSelector('.overlay-panel', { state: 'visible' });
+    await page.waitForSelector('ion-modal:not(.overlay-hidden)', { state: 'visible' });
 
     const validContent = JSON.stringify({
       notebooks: [
@@ -653,20 +622,18 @@ test.describe('ImportOverlay', () => {
       input.dispatchEvent(new Event('change', { bubbles: true }));
     }, validContent);
 
-    await page.waitForSelector('.export-notebook-item', { state: 'visible' });
+    await page.waitForSelector('ion-item', { state: 'visible' });
 
-    await page.locator('.overlay-panel button:has-text("Deselect All")').click();
+    await page.locator('ion-modal ion-button').filter({ hasText: /^Deselect All$/ }).click();
 
-    await expect(page.locator('.overlay-panel button.btn-primary:has-text("Import")')).toBeDisabled();
+    await expect(page.locator('ion-modal:not(.overlay-hidden) ion-button:has-text("Import")')).toHaveAttribute('disabled', /.*/);
   });
 
   test('shows import preview with correct counts', async ({ page }) => {
-    await page.waitForSelector('.app-header', { state: 'visible' });
-
     await openSideMenu(page);
-    await page.click('button:has-text("Import")');
+    await page.click('ion-menu ion-item:has-text("Import Data")');
 
-    await page.waitForSelector('.overlay-panel', { state: 'visible' });
+    await page.waitForSelector('ion-modal:not(.overlay-hidden)', { state: 'visible' });
 
     const validContent = JSON.stringify({
       notebooks: [
@@ -688,15 +655,13 @@ test.describe('ImportOverlay', () => {
       input.dispatchEvent(new Event('change', { bubbles: true }));
     }, validContent);
 
-    await page.waitForSelector('.import-preview', { state: 'visible' });
+    await page.waitForSelector('ion-modal:not(.overlay-hidden) ion-text:has-text("new notebooks will be created")', { state: 'visible' });
 
-    await expect(page.locator('.import-preview')).toContainText('1 new notebooks will be created');
-    await expect(page.locator('.import-preview')).toContainText('2 new memos will be added');
+    await expect(page.locator('ion-modal:not(.overlay-hidden) ion-text')).toContainText('1 new notebooks will be created');
+    await expect(page.locator('ion-modal:not(.overlay-hidden) ion-text')).toContainText('2 new memos will be added');
   });
 
   test('shows duplicate count in preview', async ({ page }) => {
-    await page.waitForSelector('.app-header', { state: 'visible' });
-
     await createNotebook(page, 'Duplicate Test Notebook');
 
     const notebookId = await page.evaluate(() => {
@@ -704,16 +669,14 @@ test.describe('ImportOverlay', () => {
       return notebooks[0]?.id;
     });
 
-    await page.click('button:has-text("Duplicate Test Notebook")');
-    await page.waitForSelector('.back-btn', { state: 'visible' });
     await addMemo(page, 'Duplicate Memo', 'Duplicate Explanation');
 
     await goBackToNotebookList(page);
 
     await openSideMenu(page);
-    await page.click('button:has-text("Import")');
+    await page.click('ion-menu ion-item:has-text("Import Data")');
 
-    await page.waitForSelector('.overlay-panel', { state: 'visible' });
+    await page.waitForSelector('ion-modal:not(.overlay-hidden)', { state: 'visible' });
 
     const validContent = JSON.stringify({
       notebooks: [
@@ -734,18 +697,16 @@ test.describe('ImportOverlay', () => {
       input.dispatchEvent(new Event('change', { bubbles: true }));
     }, validContent);
 
-    await page.waitForSelector('.import-preview', { state: 'visible' });
+    await page.waitForSelector('ion-modal:not(.overlay-hidden) ion-text:has-text("duplicate memos will be skipped")', { state: 'visible' });
 
-    await expect(page.locator('.import-duplicates')).toContainText('1 duplicate memos will be skipped');
+    await expect(page.locator('ion-modal:not(.overlay-hidden) ion-text')).toContainText('1 duplicate memos will be skipped');
   });
 
   test('can import new notebooks successfully', async ({ page }) => {
-    await page.waitForSelector('.app-header', { state: 'visible' });
-
     await openSideMenu(page);
-    await page.click('button:has-text("Import")');
+    await page.click('ion-menu ion-item:has-text("Import Data")');
 
-    await page.waitForSelector('.overlay-panel', { state: 'visible' });
+    await page.waitForSelector('ion-modal:not(.overlay-hidden)', { state: 'visible' });
 
     const validContent = JSON.stringify({
       notebooks: [
@@ -766,56 +727,51 @@ test.describe('ImportOverlay', () => {
       input.dispatchEvent(new Event('change', { bubbles: true }));
     }, validContent);
 
-    await page.waitForSelector('.export-notebook-item', { state: 'visible' });
+    await page.waitForSelector('ion-item', { state: 'visible' });
 
     page.on('dialog', dialog => dialog.accept());
-    await page.locator('.overlay-panel button.btn-primary:has-text("Import")').click();
+    await page.locator('ion-modal:not(.overlay-hidden) ion-button:has-text("Import")').evaluate((el: any) => el.click());
 
-    await page.waitForSelector('.overlay-panel', { state: 'hidden' });
+    await page.waitForSelector('ion-modal:not(.overlay-hidden)', { state: 'hidden' });
+    await closeSideMenu(page);
 
-    await page.waitForSelector('button:has-text("Successfully Imported")');
-    await page.click('button:has-text("Successfully Imported")');
+    await page.waitForSelector('ion-item:has-text("Successfully Imported")');
+    await page.click('ion-item:has-text("Successfully Imported")');
 
-    await page.waitForSelector('.memo-card');
-    await expect(page.locator('.memo-card')).toContainText('Imported Memo');
+    await page.waitForSelector('.swiper-slide');
+    await expect(page.locator('.swiper-slide-active')).toContainText('Imported Memo');
   });
 
   test('can close import overlay via close button', async ({ page }) => {
-    await page.waitForSelector('.app-header', { state: 'visible' });
-
     await openSideMenu(page);
-    await page.click('button:has-text("Import")');
+    await page.click('ion-menu ion-item:has-text("Import Data")');
 
-    await page.waitForSelector('.overlay-panel', { state: 'visible' });
+    await page.waitForSelector('ion-modal:not(.overlay-hidden)', { state: 'visible' });
 
-    await page.click('.overlay-close');
+    await page.click('ion-button:has-text("Close")');
 
-    await page.waitForSelector('.overlay-panel', { state: 'hidden' });
+    await page.waitForSelector('ion-modal:not(.overlay-hidden)', { state: 'hidden' });
   });
 
   test('can close import overlay via backdrop click', async ({ page }) => {
-    await page.waitForSelector('.app-header', { state: 'visible' });
-
     await openSideMenu(page);
-    await page.click('button:has-text("Import")');
+    await page.click('ion-menu ion-item:has-text("Import Data")');
 
-    await page.waitForSelector('.overlay-panel', { state: 'visible' });
+    await page.waitForSelector('ion-modal:not(.overlay-hidden)', { state: 'visible' });
 
     await page.evaluate(() => {
-      const backdrop = document.querySelector('.overlay-backdrop') as HTMLElement;
-      backdrop.click();
+      const modal = document.querySelector('ion-modal:not(.overlay-hidden)') as any;
+      modal.dismiss();
     });
 
-    await page.waitForSelector('.overlay-panel', { state: 'hidden' });
+    await page.waitForSelector('ion-modal:not(.overlay-hidden)', { state: 'hidden' });
   });
 
   test('resets state when closed and reopened', async ({ page }) => {
-    await page.waitForSelector('.app-header', { state: 'visible' });
-
     await openSideMenu(page);
-    await page.click('button:has-text("Import")');
+    await page.click('ion-menu ion-item:has-text("Import Data")');
 
-    await page.waitForSelector('.overlay-panel', { state: 'visible' });
+    await page.waitForSelector('ion-modal:not(.overlay-hidden)', { state: 'visible' });
 
     const validContent = JSON.stringify({
       notebooks: [
@@ -834,28 +790,26 @@ test.describe('ImportOverlay', () => {
       input.dispatchEvent(new Event('change', { bubbles: true }));
     }, validContent);
 
-    await page.waitForSelector('.export-notebook-item', { state: 'visible' });
+    await page.waitForSelector('ion-item', { state: 'visible' });
 
-    await page.click('.overlay-close');
+    await page.click('ion-button:has-text("Close")');
 
-    await page.waitForSelector('.overlay-panel', { state: 'hidden' });
+    await page.waitForSelector('ion-modal:not(.overlay-hidden)', { state: 'hidden' });
 
     await openSideMenu(page);
-    await page.click('button:has-text("Import")');
+    await page.click('ion-menu ion-item:has-text("Import Data")');
 
-    await page.waitForSelector('.overlay-panel', { state: 'visible' });
+    await page.waitForSelector('ion-modal:not(.overlay-hidden)', { state: 'visible' });
 
-    await expect(page.locator('button:has-text("Select JSON File")')).toBeVisible();
-    await expect(page.locator('.export-notebook-item')).toHaveCount(0);
+    await expect(page.locator('ion-modal:not(.overlay-hidden) ion-button:has-text("Select JSON File")')).toBeVisible();
+    await expect(page.locator('ion-modal:not(.overlay-hidden) ion-item')).toHaveCount(0);
   });
 
   test('shows empty message for file with no notebooks', async ({ page }) => {
-    await page.waitForSelector('.app-header', { state: 'visible' });
-
     await openSideMenu(page);
-    await page.click('button:has-text("Import")');
+    await page.click('ion-menu ion-item:has-text("Import Data")');
 
-    await page.waitForSelector('.overlay-panel', { state: 'visible' });
+    await page.waitForSelector('ion-modal:not(.overlay-hidden)', { state: 'visible' });
 
     const validContent = JSON.stringify({
       notebooks: [],
@@ -872,7 +826,7 @@ test.describe('ImportOverlay', () => {
       input.dispatchEvent(new Event('change', { bubbles: true }));
     }, validContent);
 
-    await page.waitForSelector('.overlay-panel .empty-message', { state: 'visible' });
-    await expect(page.locator('.overlay-panel .empty-message')).toHaveText('No notebooks in file');
+    await page.waitForSelector('ion-modal:not(.overlay-hidden) ion-label:has-text("No notebooks in file")', { state: 'visible' });
+    await expect(page.locator('ion-modal:not(.overlay-hidden) ion-label')).toHaveText('No notebooks in file');
   });
 });

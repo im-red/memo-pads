@@ -1,8 +1,8 @@
 apply plugin: 'com.android.application'
 
 android {
-    namespace "com.memopads.app"
-    compileSdk rootProject.ext.compileSdkVersion
+    namespace = "com.memopads.app"
+    compileSdk = rootProject.ext.compileSdkVersion
     defaultConfig {
         applicationId "com.memopads.app"
         minSdkVersion rootProject.ext.minSdkVersion
@@ -11,7 +11,7 @@ android {
         versionName "99.99.99"
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
         aaptOptions {
-             ignoreAssetsPattern '!.svn:!.git:!.ds_store:!*.scc:.*:!CVS:!thumbs.db:!picasa.ini:!*~'
+             ignoreAssetsPattern = '!.svn:!.git:!.ds_store:!*.scc:.*:!CVS:!thumbs.db:!picasa.ini:!*~'
         }
     }
     buildTypes {

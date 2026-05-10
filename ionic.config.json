@@ -1,0 +1,7 @@
+{
+  "name": "memo-pads",
+  "integrations": {
+    "capacitor": {}
+  },
+  "type": "react"
+}

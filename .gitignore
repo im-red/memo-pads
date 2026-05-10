@@ -42,3 +42,5 @@ ios/
 /blob-report/
 /playwright/.cache/
 /playwright/.auth/
+
+ionic-slider-demo*

@@ -1,65 +1,84 @@
 import { test, expect } from '@playwright/test';
+import { waitForIonicPage, clearStorage, createNotebook, addMemo } from './test-utils';
 
 test.beforeEach(async ({ page }) => {
   await page.goto('/');
-  await page.evaluate(() => localStorage.clear());
+  await clearStorage(page);
   await page.reload();
+  await waitForIonicPage(page);
 });
 
 test('clicking memo card menu does not toggle explanation visibility', async ({ page }) => {
-  await page.click('.add-notebook-btn');
-  await page.fill('input#notebookName', 'Test Notebook');
-  await page.click('button:has-text("Create")');
+  await createNotebook(page, 'Test Notebook');
 
-  await page.waitForSelector('.notebook-item', { state: 'visible' });
-  await page.click('.notebook-item');
+  const addFirstBtn = page.locator('ion-button:has-text("Add Your First Memo")');
+  await addFirstBtn.click();
+  await page.waitForTimeout(500);
 
-  await page.waitForSelector('.empty-message', { state: 'visible' });
-  await page.click('.btn-primary:has-text("Add Your First Memo")');
+  const modal = page.locator('ion-modal:not(.overlay-hidden)').first();
+  await expect(modal).toBeVisible();
 
-  await page.waitForSelector('.overlay-panel', { state: 'visible' });
-  await page.fill('textarea#originalText', 'Test Word');
-  await page.fill('textarea#explanation', 'Test Explanation');
-  await page.click('button:has-text("Add Memo")');
+  const originalInput = modal.locator('ion-textarea[placeholder="Enter the word or phrase..."] textarea');
+  await originalInput.fill('Test Word');
 
-  await page.waitForSelector('.memo-card__menu-btn', { state: 'visible' });
+  const explanationInput = modal.locator('ion-textarea[placeholder="Enter the meaning or translation..."] textarea');
+  await explanationInput.fill('Test Explanation');
 
-  // Enable "Always show explanation" via header menu
-  await page.click('.header-menu-btn');
-  await page.waitForTimeout(200);
-  await page.click('.header-menu-dropdown button:has-text("Always show explanation")');
+  const addButton = modal.locator('ion-button:has-text("Add Memo")');
+  await addButton.click();
+  await page.waitForTimeout(1000);
+
+  const headerMenuBtn = page.locator('ion-toolbar ion-button:has(ion-icon)').first();
+  await headerMenuBtn.click();
   await page.waitForTimeout(300);
 
-  const explanation = page.locator('.memo-card__explanation');
+  await page.evaluate(() => {
+    const actionSheets = Array.from(document.querySelectorAll('ion-action-sheet'));
+    const activeSheet = actionSheets.find(sheet => !sheet.classList.contains('overlay-hidden'));
+    if (activeSheet) {
+      const buttons = Array.from(activeSheet.querySelectorAll('button.action-sheet-button'));
+      const alwaysShowBtn = buttons.find(b => b.textContent?.includes('Always show explanation')) as HTMLButtonElement;
+      if (alwaysShowBtn) alwaysShowBtn.click();
+    }
+  });
+  await page.waitForTimeout(500);
+
+  const explanation = page.locator('.swiper-slide-active div').filter({ hasText: /^Test Explanation$/ });
   await expect(explanation).toBeVisible();
 
-  await page.click('.memo-card__menu-btn');
+  const memoMenuBtn = page.locator('.swiper-slide-active ion-button:has(ion-icon)').first();
+  await memoMenuBtn.click();
+  await page.waitForTimeout(300);
 
   await expect(explanation).toBeVisible();
 });
 
 test('explanation remains hidden after clicking menu when explanation was hidden', async ({ page }) => {
-  await page.click('.add-notebook-btn');
-  await page.fill('input#notebookName', 'Test Notebook 2');
-  await page.click('button:has-text("Create")');
+  await createNotebook(page, 'Test Notebook 2');
 
-  await page.waitForSelector('.notebook-item', { state: 'visible' });
-  await page.click('.notebook-item');
+  const addFirstBtn = page.locator('ion-button:has-text("Add Your First Memo")');
+  await addFirstBtn.click();
+  await page.waitForTimeout(500);
 
-  await page.waitForSelector('.empty-message', { state: 'visible' });
-  await page.click('.btn-primary:has-text("Add Your First Memo")');
+  const modal = page.locator('ion-modal:not(.overlay-hidden)').first();
+  await expect(modal).toBeVisible();
 
-  await page.waitForSelector('.overlay-panel', { state: 'visible' });
-  await page.fill('textarea#originalText', 'Test Word');
-  await page.fill('textarea#explanation', 'Test Explanation');
-  await page.click('button:has-text("Add Memo")');
+  const originalInput = modal.locator('ion-textarea[placeholder="Enter the word or phrase..."] textarea');
+  await originalInput.fill('Test Word');
 
-  await page.waitForSelector('.memo-card__menu-btn', { state: 'visible' });
+  const explanationInput = modal.locator('ion-textarea[placeholder="Enter the meaning or translation..."] textarea');
+  await explanationInput.fill('Test Explanation');
 
-  const explanation = page.locator('.memo-card__explanation');
+  const addButton = modal.locator('ion-button:has-text("Add Memo")');
+  await addButton.click();
+  await page.waitForTimeout(1000);
+
+  const explanation = page.locator('.swiper-slide-active div').filter({ hasText: /^Test Explanation$/ });
   await expect(explanation).not.toBeVisible();
 
-  await page.click('.memo-card__menu-btn');
+  const memoMenuBtn = page.locator('.swiper-slide-active ion-button:has(ion-icon)').first();
+  await memoMenuBtn.click();
+  await page.waitForTimeout(300);
 
   await expect(explanation).not.toBeVisible();
 });

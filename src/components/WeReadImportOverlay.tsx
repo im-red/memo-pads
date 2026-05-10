@@ -1,24 +1,23 @@
-import { useState, useMemo, useRef } from 'react';
-import { Memo, Notebook } from '../types/memo';
-import { parseWeReadNotes, WeReadNote } from '../utils/wereadParser';
+import React, { useState, useMemo, useRef } from 'react';
+import {
+  IonModal, IonHeader, IonToolbar, IonTitle, IonButtons, IonButton,
+  IonContent, IonItem, IonLabel, IonText, IonSelect, IonSelectOption,
+  IonSegment, IonSegmentButton, IonTextarea
+} from '@ionic/react';
+import { Memo } from '../models';
+import { parseWeReadNotes, WeReadNote } from '../util/wereadParser';
+import { useApp } from '../data/AppContext';
 
 interface WeReadImportOverlayProps {
   isOpen: boolean;
-  notebooks: Notebook[];
-  existingMemos: Memo[];
   onClose: () => void;
-  onImport: (newMemos: Memo[], notebookId: string) => void;
 }
 
 type InputMode = 'file' | 'text';
 
-const WeReadImportOverlay = ({
-  isOpen,
-  notebooks,
-  existingMemos,
-  onClose,
-  onImport
-}: WeReadImportOverlayProps) => {
+const WeReadImportOverlay: React.FC<WeReadImportOverlayProps> = ({ isOpen, onClose }) => {
+  const { notebooks, memos: existingMemos, weReadImport } = useApp();
+
   const [inputMode, setInputMode] = useState<InputMode>('file');
   const [textContent, setTextContent] = useState('');
   const [notes, setNotes] = useState<WeReadNote[]>([]);
@@ -132,7 +131,7 @@ const WeReadImportOverlay = ({
           id: generateMemoId(),
           originalText: note.originalText,
           explanation: note.explanation,
-          notebookId: '',
+          notebookId: '', // will be set by context
           createdAt: now,
           updatedAt: now,
           importOrder: importOrder++,
@@ -142,8 +141,9 @@ const WeReadImportOverlay = ({
       }
     });
 
-    onImport(newMemos, selectedNotebookId);
+    weReadImport(newMemos, selectedNotebookId);
     resetState();
+    onClose();
   };
 
   const resetState = () => {
@@ -159,134 +159,113 @@ const WeReadImportOverlay = ({
     onClose();
   };
 
-  if (!isOpen) return null;
-
   return (
-    <div className="overlay">
-      <div className="overlay-backdrop" onClick={handleClose} />
-      <div className="overlay-panel">
-        <div className="overlay-header">
-          <h2>Import WeRead Notes</h2>
-          <button type="button" className="overlay-close" onClick={handleClose}>
-            ×
-          </button>
-        </div>
-
+    <IonModal isOpen={isOpen} onDidDismiss={handleClose}>
+      <IonHeader>
+        <IonToolbar>
+          <IonTitle>Import WeRead Notes</IonTitle>
+          <IonButtons slot="end">
+            <IonButton onClick={handleClose}>Close</IonButton>
+          </IonButtons>
+        </IonToolbar>
+      </IonHeader>
+      <IonContent className="ion-padding">
         {notes.length === 0 ? (
           <>
-            <div className="weread-tabs">
-              <button
-                type="button"
-                className={`weread-tab ${inputMode === 'file' ? 'active' : ''}`}
-                onClick={() => setInputMode('file')}
-              >
-                From File
-              </button>
-              <button
-                type="button"
-                className={`weread-tab ${inputMode === 'text' ? 'active' : ''}`}
-                onClick={() => setInputMode('text')}
-              >
-                From Text
-              </button>
+            <IonSegment value={inputMode} onIonChange={e => setInputMode(e.detail.value as InputMode)}>
+              <IonSegmentButton value="file">
+                <IonLabel>From File</IonLabel>
+              </IonSegmentButton>
+              <IonSegmentButton value="text">
+                <IonLabel>From Text</IonLabel>
+              </IonSegmentButton>
+            </IonSegment>
+
+            <div className="ion-margin-top">
+              {inputMode === 'file' ? (
+                <div className="ion-text-center ion-padding">
+                  <input
+                    ref={fileInputRef}
+                    type="file"
+                    accept=".txt,text/plain"
+                    style={{ display: 'none' }}
+                    onChange={handleFileChange}
+                  />
+                  <IonButton expand="block" onClick={() => fileInputRef.current?.click()}>
+                    Select WeRead Notes File
+                  </IonButton>
+                  <IonText color="medium" className="ion-margin-top" style={{ display: 'block' }}>
+                    <small>Select a text file exported from WeRead containing your notes.</small>
+                  </IonText>
+                </div>
+              ) : (
+                <div>
+                  <IonItem lines="full">
+                    <IonTextarea
+                      value={textContent}
+                      onIonChange={e => setTextContent(e.detail.value!)}
+                      placeholder="Paste WeRead notes here..."
+                      rows={8}
+                    />
+                  </IonItem>
+                  <IonButton
+                    expand="block"
+                    className="ion-margin-top"
+                    onClick={handleTextSubmit}
+                    disabled={!textContent.trim()}
+                  >
+                    Parse Notes
+                  </IonButton>
+                </div>
+              )}
+              {error && <IonText color="danger" className="ion-text-center"><p>{error}</p></IonText>}
             </div>
-
-            {inputMode === 'file' ? (
-              <div className="import-file-section">
-                <input
-                  ref={fileInputRef}
-                  type="file"
-                  accept=".txt,text/plain"
-                  style={{ display: 'none' }}
-                  onChange={handleFileChange}
-                />
-                <button
-                  type="button"
-                  className="btn-primary"
-                  onClick={() => fileInputRef.current?.click()}
-                >
-                  Select WeRead Notes File
-                </button>
-                <p className="weread-hint">
-                  Select a text file exported from WeRead containing your notes.
-                </p>
-              </div>
-            ) : (
-              <div className="weread-text-input">
-                <textarea
-                  value={textContent}
-                  onChange={e => setTextContent(e.target.value)}
-                  placeholder="Paste WeRead notes here..."
-                  rows={8}
-                />
-                <button
-                  type="button"
-                  className="btn-primary"
-                  onClick={handleTextSubmit}
-                  disabled={!textContent.trim()}
-                >
-                  Parse Notes
-                </button>
-              </div>
-            )}
-
-            {error && <p className="form-error">{error}</p>}
           </>
         ) : (
           <>
-            <div className="weread-import-info">
-              <p className="weread-import-count">
-                Found <strong>{preview?.total || 0}</strong> notes
-              </p>
-              <p className={`import-duplicates ${preview?.duplicates ? 'has-duplicates' : ''}`}>
-                <strong>{preview?.duplicates || 0}</strong> duplicate notes will be skipped
-              </p>
-              <p className="weread-import-hint">
-                {preview?.newMemos || 0} notes will be imported as memos.
-              </p>
+            <div className="ion-text-center ion-margin-bottom">
+              <IonText color="medium">
+                <p>Found <strong>{preview?.total || 0}</strong> notes</p>
+                <p><strong>{preview?.duplicates || 0}</strong> duplicate notes will be skipped</p>
+                <p>{preview?.newMemos || 0} notes will be imported as memos.</p>
+              </IonText>
             </div>
 
-            <form onSubmit={e => { e.preventDefault(); handleConfirm(); }} className="memo-form">
-              <div className="form-group">
-                <label htmlFor="notebookSelect">Import to Notebook</label>
-                <select
-                  id="notebookSelect"
-                  value={selectedNotebookId}
-                  onChange={e => setSelectedNotebookId(e.target.value)}
-                  className="notebook-select"
-                >
-                  <option value="">Select a notebook...</option>
-                  {activeNotebooks.map(notebook => (
-                    <option key={notebook.id} value={notebook.id}>
-                      {notebook.name}
-                    </option>
-                  ))}
-                </select>
-              </div>
+            <IonItem lines="full">
+              <IonSelect
+                label="Import to Notebook"
+                labelPlacement="stacked"
+                value={selectedNotebookId}
+                onIonChange={e => setSelectedNotebookId(e.detail.value)}
+                placeholder="Select a notebook..."
+              >
+                {activeNotebooks.map(notebook => (
+                  <IonSelectOption key={notebook.id} value={notebook.id}>
+                    {notebook.name}
+                  </IonSelectOption>
+                ))}
+              </IonSelect>
+            </IonItem>
 
-              {error && <p className="form-error">{error}</p>}
+            {error && <IonText color="danger" className="ion-text-center"><p>{error}</p></IonText>}
 
-              <div className="weread-actions">
-                <button
-                  type="button"
-                  className="btn-secondary"
-                  onClick={resetState}
-                >
-                  Back
-                </button>
-                <button
-                  type="submit"
-                  className="btn-primary"
-                  disabled={preview?.newMemos === 0 || !selectedNotebookId}
-                >
-                  Import {preview?.newMemos || 0} Notes
-                </button>
-              </div>
-            </form>
+            <div className="ion-margin-top" style={{ display: 'flex', gap: '8px' }}>
+              <IonButton fill="outline" expand="block" style={{ flex: 1 }} onClick={resetState}>
+                Back
+              </IonButton>
+              <IonButton
+                expand="block"
+                style={{ flex: 1 }}
+                onClick={handleConfirm}
+                disabled={preview?.newMemos === 0 || !selectedNotebookId}
+              >
+                Import
+              </IonButton>
+            </div>
           </>
         )}
-      </div>
-    </div>
+      </IonContent>
+    </IonModal>
   );
 };
 

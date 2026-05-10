@@ -1,5 +1,6 @@
 import { test } from '@playwright/test';
 import path from 'path';
+import { waitForIonicPage } from './test-utils';
 
 test.describe('Capture Screenshots for README', () => {
     // Only run in Chromium to get the Mobile Chrome emulated view
@@ -7,7 +8,7 @@ test.describe('Capture Screenshots for README', () => {
 
     test('capture notebooks list', async ({ page }) => {
         await page.goto('/');
-        
+
         // Add some mock notebooks
         await page.evaluate(() => {
             const notebooks = [
@@ -16,7 +17,7 @@ test.describe('Capture Screenshots for README', () => {
                 { id: '3', name: 'Reading Notes', createdAt: new Date().toISOString(), updatedAt: new Date().toISOString(), isDeleted: false, importOrder: 2 }
             ];
             localStorage.setItem('memo-pads:notebooks', JSON.stringify(notebooks));
-            
+
             const memos = [
                 { id: '1', notebookId: '1', originalText: 'Ephemeral', explanation: 'lasting for a very short time.', createdAt: new Date().toISOString(), updatedAt: new Date().toISOString(), isDeleted: false, importOrder: 0 },
                 { id: '2', notebookId: '1', originalText: 'Serendipity', explanation: 'the occurrence and development of events by chance in a happy or beneficial way.', createdAt: new Date().toISOString(), updatedAt: new Date().toISOString(), isDeleted: false, importOrder: 1 },
@@ -24,11 +25,12 @@ test.describe('Capture Screenshots for README', () => {
             ];
             localStorage.setItem('memo-pads:memos', JSON.stringify(memos));
         });
-        
+
         await page.reload();
-        await page.waitForSelector('.notebook-list');
+        await waitForIonicPage(page);
+        await page.waitForSelector('ion-item:has-text("English Vocabulary")');
         await page.waitForTimeout(500); // Wait for rendering
-        
+
         await page.screenshot({
             path: path.join('docs', 'screenshots', 'notebooks-list.png'),
             fullPage: false
@@ -37,13 +39,12 @@ test.describe('Capture Screenshots for README', () => {
 
     test('capture side menu', async ({ page }) => {
         await page.goto('/');
-        await page.waitForSelector('.notebook-list');
-        
+        await waitForIonicPage(page);
+
         // Click the menu button
-        await page.click('.menu-trigger-btn');
-        await page.waitForSelector('.side-menu--open');
+        await page.click('ion-menu-button');
         await page.waitForTimeout(500); // Wait for animation
-        
+
         await page.screenshot({
             path: path.join('docs', 'screenshots', 'side-menu.png'),
             fullPage: false
@@ -52,40 +53,40 @@ test.describe('Capture Screenshots for README', () => {
 
     test('capture memo reading view', async ({ page }) => {
         await page.goto('/');
-        
+
         // Add some mock data and set a progress state
         await page.evaluate(() => {
             const notebooks = [
                 { id: '1', name: 'English Vocabulary', createdAt: new Date().toISOString(), updatedAt: new Date().toISOString(), isDeleted: false, importOrder: 0 }
             ];
             localStorage.setItem('memo-pads:notebooks', JSON.stringify(notebooks));
-            
+
             const memos = [
                 { id: '1', notebookId: '1', originalText: 'Serendipity', explanation: 'the occurrence and development of events by chance in a happy or beneficial way.\n\nExample:\nThey found each other by pure serendipity.', createdAt: new Date().toISOString(), updatedAt: new Date().toISOString(), isDeleted: false, importOrder: 1 }
             ];
             localStorage.setItem('memo-pads:memos', JSON.stringify(memos));
-            
+
             localStorage.setItem('memo-pads:progress', JSON.stringify({
                 '1': { currentMemoId: '1', showExplanation: true, alwaysShowExplanation: false }
             }));
         });
-        
+
         await page.reload();
-        await page.waitForSelector('.notebook-list');
+        await waitForIonicPage(page);
         await page.waitForTimeout(500); // Wait for rendering
-        
+
         // Click into the notebook
-        await page.click('.notebook-item:has-text("English Vocabulary")');
-        await page.waitForSelector('.memo-view');
-        
+        await page.locator('ion-item:has-text("English Vocabulary")').evaluate((el: any) => el.click());
+        await page.waitForSelector('ion-back-button');
+
         // Ensure explanation is visible
-        const explLocator = page.locator('.memo-card__explanation');
-        if (await explLocator.isHidden()) {
-            await page.click('.memo-card__original');
+        const explLocator = page.locator('.swiper-slide-active > div > div').filter({ hasText: 'the occurrence and development' });
+        if (await explLocator.isHidden().catch(() => true)) {
+            await page.locator('.swiper-slide-active > div').first().click();
         }
-        
+
         await page.waitForTimeout(500); // Wait for transition
-        
+
         await page.screenshot({
             path: path.join('docs', 'screenshots', 'memo-reading.png'),
             fullPage: false
@@ -94,16 +95,16 @@ test.describe('Capture Screenshots for README', () => {
 
     test('capture settings page', async ({ page }) => {
         await page.goto('/');
-        await page.waitForSelector('.notebook-list');
-        
+        await waitForIonicPage(page);
+
         // Click menu, then Settings
-        await page.click('.menu-trigger-btn');
-        await page.waitForSelector('.side-menu--open');
-        await page.click('.side-menu-item:has-text("Settings")');
-        
-        await page.waitForSelector('.settings-container');
+        await page.click('ion-menu-button');
+        await page.waitForTimeout(500); // Wait for animation
+        await page.locator('ion-menu ion-item:has-text("Settings")').evaluate((el: any) => el.click());
+
+        await page.waitForSelector('ion-item:has-text("About")');
         await page.waitForTimeout(500); // Wait for transition
-        
+
         await page.screenshot({
             path: path.join('docs', 'screenshots', 'settings-page.png'),
             fullPage: false

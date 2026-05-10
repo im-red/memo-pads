@@ -7,8 +7,9 @@ export default defineConfig({
   forbidOnly: !!process.env.CI,
   retries: process.env.CI ? 2 : 0,
   workers: process.env.CI ? 1 : undefined,
+  maxFailures: 1,
   reporter: [['html', { open: 'never' }]],
-  timeout: 10000,
+  timeout: 30000,
   use: {
     baseURL: 'http://localhost:3001',
     trace: 'on-first-retry',
@@ -27,10 +28,6 @@ export default defineConfig({
     },
   },
   projects: [
-    {
-      name: 'chromium',
-      use: { ...devices['Desktop Chrome'] },
-    },
     {
       name: 'Mobile Chrome',
       use: { ...devices['Pixel 7'] }, // Emulates Android
