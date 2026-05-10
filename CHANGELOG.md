@@ -1,3 +1,10 @@
+## [v1.1.0] - 2026-05-10
+
+### Improvements
+
+- **Ionic Framework** - Reimplemented the entire user interface using the Ionic Framework to provide a more native mobile experience and better responsiveness.
+- **Capacitor 8** - Upgraded the native engine to Capacitor 8 for improved performance and modern API support.
+
 ## [v1.0.1] - 2026-04-30
 
 ### Improvements
