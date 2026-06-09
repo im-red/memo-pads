@@ -5,7 +5,7 @@ import {
   IonContent, IonButton, IonIcon, IonFab, IonFabButton, IonActionSheet, IonText, useIonAlert
 } from '@ionic/react';
 import {
-  add, ellipsisVertical, checkmarkCircle, create, trash, clipboardOutline
+  add, ellipsisVertical, checkmarkCircle, create, trash, clipboardOutline, refresh
 } from 'ionicons/icons';
 import { Swiper, SwiperSlide } from 'swiper/react';
 import { Virtual } from 'swiper/modules';
@@ -60,6 +60,23 @@ const NotebookPage: React.FC = () => {
 
   const currentIndex = notebookMemos.findIndex(m => m.id === initialMemoId);
   const currentMemo = currentIndex >= 0 ? notebookMemos[currentIndex] : null;
+
+  const [originalIndex, setOriginalIndex] = useState<number | null>(null);
+  const [hasDragged, setHasDragged] = useState(false);
+  const [swiperInstance, setSwiperInstance] = useState<any>(null);
+  const [sliderIndex, setSliderIndex] = useState(currentIndex >= 0 ? currentIndex : 0);
+
+  useEffect(() => {
+    if (currentIndex >= 0) {
+      setSliderIndex(currentIndex);
+    }
+  }, [currentIndex]);
+
+  useEffect(() => {
+    if (originalIndex === null && currentIndex >= 0) {
+      setOriginalIndex(currentIndex);
+    }
+  }, [currentIndex, originalIndex]);
 
   const handleToggleAlwaysShow = () => {
     updateProgress(notebookId, {
@@ -140,20 +157,115 @@ const NotebookPage: React.FC = () => {
         ) : currentMemo ? (
           <div style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
             <div style={{ display: 'flex', alignItems: 'center', marginBottom: '16px' }}>
-              <span style={{ fontSize: '0.85em', color: 'var(--ion-color-medium)', marginRight: '12px' }}>
-                {currentIndex + 1} / {notebookMemos.length}
+              <span style={{
+                fontSize: '0.85em',
+                color: 'var(--ion-color-medium)',
+                marginRight: '12px',
+                minWidth: `${String(notebookMemos.length).length * 2 + 3}ch`,
+                textAlign: 'right',
+                fontVariantNumeric: 'tabular-nums'
+              }}>
+                {sliderIndex + 1} / {notebookMemos.length}
               </span>
-              <div style={{ flex: 1, height: '8px', background: 'var(--ion-color-light)', borderRadius: '4px', overflow: 'hidden' }}>
-                <div style={{
-                  height: '100%',
-                  width: `${((currentIndex + 1) / notebookMemos.length) * 100}%`,
-                  background: 'var(--ion-color-primary)',
-                  transition: 'width 0.3s ease'
-                }} />
+
+              <div style={{ position: 'relative', flex: 1, height: '24px', display: 'flex', alignItems: 'center' }}>
+                <div style={{ position: 'absolute', top: '50%', transform: 'translateY(-50%)', width: '100%', height: '8px', background: 'var(--ion-color-light)', borderRadius: '4px' }}>
+                  <div style={{
+                    height: '100%',
+                    width: `${notebookMemos.length > 1 ? (sliderIndex / (notebookMemos.length - 1)) * 100 : 100}%`,
+                    background: 'var(--ion-color-primary)',
+                    borderRadius: '4px',
+                    transition: 'width 0.3s ease'
+                  }} />
+                </div>
+
+                {hasDragged && originalIndex !== null && notebookMemos.length > 1 && (
+                  <div
+                    data-testid="original-index-marker"
+                    style={{
+                      position: 'absolute',
+                      top: '50%',
+                      left: `${(originalIndex / (notebookMemos.length - 1)) * 100}%`,
+                      transform: 'translate(-50%, -50%)',
+                      width: '4px',
+                      height: '16px',
+                      background: 'var(--ion-color-medium)',
+                      borderRadius: '2px',
+                      zIndex: 1,
+                      pointerEvents: 'none'
+                    }} />
+                )}
+
+                <input
+                  type="range"
+                  min={0}
+                  max={notebookMemos.length > 1 ? notebookMemos.length - 1 : 0}
+                  value={sliderIndex}
+                  onChange={(e) => {
+                    setHasDragged(true);
+                    const newIndex = parseInt(e.target.value, 10);
+                    setSliderIndex(newIndex);
+                    if (swiperInstance) {
+                      swiperInstance.slideTo(newIndex);
+                    }
+                  }}
+                  style={{
+                    position: 'absolute',
+                    top: 0,
+                    left: 0,
+                    width: '100%',
+                    height: '100%',
+                    margin: 0,
+                    opacity: 0,
+                    cursor: 'pointer',
+                    zIndex: 3
+                  }}
+                />
+
+                {notebookMemos.length > 1 && (
+                  <div style={{
+                    position: 'absolute',
+                    top: '50%',
+                    left: `${(sliderIndex / (notebookMemos.length - 1)) * 100}%`,
+                    transform: 'translate(-50%, -50%)',
+                    width: '16px',
+                    height: '16px',
+                    background: 'var(--ion-background-color, #fff)',
+                    border: '2px solid var(--ion-color-primary)',
+                    borderRadius: '50%',
+                    zIndex: 2,
+                    pointerEvents: 'none',
+                    transition: 'left 0.3s ease',
+                    boxShadow: '0 2px 4px rgba(0,0,0,0.2)'
+                  }} />
+                )}
               </div>
+
+              <IonButton
+                data-testid="reset-progress-button"
+                fill="clear"
+                size="small"
+                style={{
+                  visibility: hasDragged ? 'visible' : 'hidden',
+                  '--padding-start': '4px',
+                  '--padding-end': '4px'
+                }}
+                onClick={() => {
+                  if (hasDragged && originalIndex !== null && swiperInstance) {
+                    swiperInstance.slideTo(originalIndex);
+                    setHasDragged(false);
+                  }
+                }}
+              >
+                <IonIcon slot="icon-only" icon={refresh} color="medium" />
+              </IonButton>
             </div>
 
             <Swiper
+              onSwiper={setSwiperInstance}
+              onSlideChange={(swiper) => {
+                setSliderIndex(swiper.activeIndex);
+              }}
               modules={[Virtual]}
               virtual={{ addSlidesBefore: 2, addSlidesAfter: 2 }}
               style={{ flex: 1, width: '100%', height: '100%' }}
