@@ -1,3 +1,11 @@
+## [v1.1.1] - 2026-06-09
+
+### New Features
+
+- **Long Press Copy** - Support copying memo content by long pressing on the memo card.
+
+- **Progress Bar Navigation** - Support switching between memos by dragging the progress bar handle.
+
 ## [v1.1.0] - 2026-05-10
 
 ### Improvements
