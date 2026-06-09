@@ -1,17 +1,19 @@
-import React, { useState, useMemo, useEffect } from 'react';
+import React, { useState, useMemo, useEffect, useRef } from 'react';
 import { useParams, useHistory } from 'react-router-dom';
 import {
   IonPage, IonHeader, IonToolbar, IonTitle, IonButtons, IonBackButton,
-  IonContent, IonButton, IonIcon, IonFab, IonFabButton, IonActionSheet, IonText, useIonAlert
+  IonContent, IonButton, IonIcon, IonFab, IonFabButton, IonActionSheet, IonText, useIonAlert, useIonToast
 } from '@ionic/react';
 import {
-  add, ellipsisVertical, checkmarkCircle, create, trash, clipboardOutline, refresh
+  add, ellipsisVertical, checkmarkCircle, create, trash, clipboardOutline, refresh, close
 } from 'ionicons/icons';
 import { Swiper, SwiperSlide } from 'swiper/react';
 import { Virtual } from 'swiper/modules';
 import 'swiper/css';
 import 'swiper/css/virtual';
 import '@ionic/react/css/ionic-swiper.css';
+import { Clipboard } from '@capacitor/clipboard';
+import { Haptics, ImpactStyle } from '@capacitor/haptics';
 import { useApp } from '../data/AppContext';
 import { Memo } from '../models';
 import AddMemoOverlay from '../components/AddMemoOverlay';
@@ -100,6 +102,47 @@ const NotebookPage: React.FC = () => {
   };
 
   const [presentAlert] = useIonAlert();
+  const [presentToast] = useIonToast();
+
+  const longPressTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const handleCopyText = async (text: string) => {
+    await Clipboard.write({ string: text });
+    await Haptics.impact({ style: ImpactStyle.Medium });
+    presentToast({
+      message: 'Copied to clipboard',
+      duration: 1500,
+      position: 'bottom',
+      color: 'medium',
+    });
+  };
+
+  const handleCopyAll = async () => {
+    if (!memoActionSheet) return;
+    const text = `${memoActionSheet.originalText}\n\n${memoActionSheet.explanation}`;
+    await handleCopyText(text);
+    setMemoActionSheet(null);
+  };
+
+  const createLongPressHandlers = (text: string) => ({
+    onTouchStart: () => {
+      longPressTimerRef.current = setTimeout(() => {
+        handleCopyText(text);
+      }, 600);
+    },
+    onTouchEnd: () => {
+      if (longPressTimerRef.current) {
+        clearTimeout(longPressTimerRef.current);
+        longPressTimerRef.current = null;
+      }
+    },
+    onTouchMove: () => {
+      if (longPressTimerRef.current) {
+        clearTimeout(longPressTimerRef.current);
+        longPressTimerRef.current = null;
+      }
+    },
+  });
 
   const handleDelete = (memoId: string) => {
     presentAlert({
@@ -270,12 +313,18 @@ const NotebookPage: React.FC = () => {
                       <IonIcon slot="icon-only" icon={ellipsisVertical} />
                     </IonButton>
 
-                    <div className="memo-card-text">
+                    <div
+                      className="memo-card-text"
+                      {...createLongPressHandlers(memo.originalText)}
+                    >
                       {memo.originalText}
                     </div>
 
                     {(alwaysShowExplanation || (showExplanation && memo.id === currentMemo?.id)) && (
-                      <div className="memo-card-explanation">
+                      <div
+                        className="memo-card-explanation"
+                        {...createLongPressHandlers(memo.explanation)}
+                      >
                         {memo.explanation}
                       </div>
                     )}
@@ -318,6 +367,11 @@ const NotebookPage: React.FC = () => {
           onDidDismiss={() => setMemoActionSheet(null)}
           buttons={[
             {
+              text: 'Copy',
+              icon: clipboardOutline,
+              handler: handleCopyAll
+            },
+            {
               text: 'Edit',
               icon: create,
               handler: () => {
@@ -337,6 +391,7 @@ const NotebookPage: React.FC = () => {
             },
             {
               text: 'Cancel',
+              icon: close,
               role: 'cancel'
             }
           ]}
