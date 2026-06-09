@@ -1,0 +1,159 @@
+.notebook-title-container {
+  display: flex;
+  flex-direction: column;
+}
+
+.notebook-title-count {
+  font-size: 0.75em;
+  opacity: 0.8;
+  font-weight: normal;
+}
+
+.no-memos-container {
+  margin-top: 50px;
+}
+
+.notebook-progress-container {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+
+.progress-header {
+  display: flex;
+  align-items: center;
+  margin-bottom: 16px;
+}
+
+.progress-index {
+  font-size: 0.85em;
+  color: var(--ion-color-medium);
+  margin-right: 12px;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+.progress-slider-wrapper {
+  position: relative;
+  flex: 1;
+  height: 24px;
+  display: flex;
+  align-items: center;
+}
+
+.progress-track-bg {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 100%;
+  height: 8px;
+  background: var(--ion-color-light);
+  border-radius: 4px;
+}
+
+.progress-track-fill {
+  height: 100%;
+  background: var(--ion-color-primary);
+  border-radius: 4px;
+  transition: width 0.3s ease;
+}
+
+.original-index-marker {
+  position: absolute;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  width: 4px;
+  height: 16px;
+  background: var(--ion-color-medium);
+  border-radius: 2px;
+  z-index: 1;
+  pointer-events: none;
+}
+
+.progress-slider-input {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  opacity: 0;
+  cursor: pointer;
+  z-index: 3;
+}
+
+.progress-slider-thumb {
+  position: absolute;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  width: 16px;
+  height: 16px;
+  background: var(--ion-background-color, #fff);
+  border: 2px solid var(--ion-color-primary);
+  border-radius: 50%;
+  z-index: 2;
+  pointer-events: none;
+  transition: left 0.3s ease;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+}
+
+.reset-progress-button {
+  --padding-start: 4px;
+  --padding-end: 4px;
+}
+
+.swiper-container {
+  flex: 1;
+  width: 100%;
+  height: 100%;
+}
+
+.swiper-slide-content {
+  box-sizing: border-box;
+  display: flex;
+  justify-content: center;
+}
+
+.memo-card {
+  height: 100%;
+  width: calc(100% - 6px);
+  background: var(--surface);
+  border-radius: 16px;
+  padding: 24px;
+  box-shadow: var(--shadow);
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  cursor: pointer;
+  overflow-y: auto;
+}
+
+.memo-card-menu-btn {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  z-index: 10;
+}
+
+.memo-card-text {
+  font-size: 1.5rem;
+  font-weight: bold;
+  margin-bottom: 16px;
+  word-break: break-word;
+  padding-right: 32px;
+  text-align: left;
+}
+
+.memo-card-explanation {
+  font-size: 1.1rem;
+  color: var(--text-muted);
+  border-top: 1px solid var(--border-color);
+  padding-top: 16px;
+  white-space: pre-line;
+  word-break: break-word;
+  text-align: left;
+}
+
+.fab-secondary-container {
+  margin-bottom: 72px;
+}

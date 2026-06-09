@@ -6,6 +6,7 @@ import {
 } from '@ionic/react';
 import { clipboardOutline, swapVerticalOutline } from 'ionicons/icons';
 import { Memo } from '../models';
+import './AddMemoOverlay.scss';
 
 interface AddMemoOverlayProps {
   isOpen: boolean;
@@ -137,11 +138,11 @@ const AddMemoOverlay: React.FC<AddMemoOverlayProps> = ({
           </IonText>
         )}
 
-        <div className="ion-margin-top" style={{ display: 'flex', gap: '8px' }}>
+        <div className="ion-margin-top button-group-row">
           <IonButton
             expand="block"
             onClick={handleSubmit}
-            style={{ flex: 1 }}
+            className="flex-button"
           >
             {editMemo ? 'Save Changes' : 'Add Memo'}
           </IonButton>

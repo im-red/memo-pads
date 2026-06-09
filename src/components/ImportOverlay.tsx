@@ -6,6 +6,7 @@ import {
 import { Notebook, Memo } from '../models';
 import { computeImportPreview, executeImport } from '../util/importUtils';
 import { useApp } from '../data/AppContext';
+import './ImportOverlay.scss';
 
 interface ImportedData {
   notebooks: Notebook[];
@@ -151,7 +152,7 @@ const ImportOverlay: React.FC<ImportOverlayProps> = ({ isOpen, onClose }) => {
               ref={fileInputRef}
               type="file"
               accept="application/json"
-              style={{ display: 'none' }}
+              className="hidden-file-input"
               onChange={handleFileChange}
             />
             <IonButton expand="block" onClick={() => fileInputRef.current?.click()}>
@@ -161,7 +162,7 @@ const ImportOverlay: React.FC<ImportOverlayProps> = ({ isOpen, onClose }) => {
           </div>
         ) : (
           <>
-            <div className="ion-margin-bottom" style={{ display: 'flex', gap: '8px' }}>
+            <div className="ion-margin-bottom button-group-row">
               <IonButton fill="outline" size="small" onClick={handleSelectAll}>Select All</IonButton>
               <IonButton fill="outline" size="small" onClick={handleDeselectAll}>Deselect All</IonButton>
             </div>

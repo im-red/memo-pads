@@ -7,6 +7,8 @@ import {
 import { refreshOutline, trashOutline } from 'ionicons/icons';
 import { useApp } from '../data/AppContext';
 
+import './TrashBinPage.scss';
+
 const TrashBinPage: React.FC = () => {
   const {
     notebooks,
@@ -119,7 +121,7 @@ const TrashBinPage: React.FC = () => {
           {activeTab === 'notebooks' && (
             <IonList>
               {deletedNotebooks.length === 0 ? (
-                <div className="ion-text-center ion-padding" style={{ marginTop: '2rem' }}>
+                <div className="ion-text-center ion-padding empty-trash-container">
                   <IonText color="medium">
                     <p>No deleted notebooks</p>
                   </IonText>
@@ -150,7 +152,7 @@ const TrashBinPage: React.FC = () => {
           {activeTab === 'memos' && (
             <IonList>
               {deletedMemos.length === 0 ? (
-                <div className="ion-text-center ion-padding" style={{ marginTop: '2rem' }}>
+                <div className="ion-text-center ion-padding empty-trash-container">
                   <IonText color="medium">
                     <p>No deleted memos</p>
                   </IonText>

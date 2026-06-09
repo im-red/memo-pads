@@ -16,6 +16,8 @@ import { useApp } from '../data/AppContext';
 import { Memo } from '../models';
 import AddMemoOverlay from '../components/AddMemoOverlay';
 
+import './NotebookPage.scss';
+
 const NotebookPage: React.FC = () => {
   const { id: notebookId } = useParams<{ id: string }>();
   const history = useHistory();
@@ -129,9 +131,9 @@ const NotebookPage: React.FC = () => {
             <IonBackButton defaultHref="/" />
           </IonButtons>
           <IonTitle>
-            <div style={{ display: 'flex', flexDirection: 'column' }}>
+            <div className="notebook-title-container">
               <span>{notebook?.name}</span>
-              <span style={{ fontSize: '0.75em', opacity: 0.8, fontWeight: 'normal' }}>
+              <span className="notebook-title-count">
                 {notebookMemos.length} memos
               </span>
             </div>
@@ -146,7 +148,7 @@ const NotebookPage: React.FC = () => {
 
       <IonContent fullscreen className="ion-padding">
         {notebookMemos.length === 0 ? (
-          <div className="ion-text-center" style={{ marginTop: '50px' }}>
+          <div className="ion-text-center no-memos-container">
             <IonText color="medium">
               <p>No memos in this notebook.</p>
             </IonText>
@@ -155,49 +157,40 @@ const NotebookPage: React.FC = () => {
             </IonButton>
           </div>
         ) : currentMemo ? (
-          <div style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
-            <div style={{ display: 'flex', alignItems: 'center', marginBottom: '16px' }}>
-              <span style={{
-                fontSize: '0.85em',
-                color: 'var(--ion-color-medium)',
-                marginRight: '12px',
-                minWidth: `${String(notebookMemos.length).length * 2 + 3}ch`,
-                textAlign: 'right',
-                fontVariantNumeric: 'tabular-nums'
-              }}>
+          <div className="notebook-progress-container">
+            <div className="progress-header">
+              <span
+                className="progress-index"
+                style={{
+                  minWidth: `${String(notebookMemos.length).length * 2 + 3}ch`
+                }}
+              >
                 {sliderIndex + 1} / {notebookMemos.length}
               </span>
 
-              <div style={{ position: 'relative', flex: 1, height: '24px', display: 'flex', alignItems: 'center' }}>
-                <div style={{ position: 'absolute', top: '50%', transform: 'translateY(-50%)', width: '100%', height: '8px', background: 'var(--ion-color-light)', borderRadius: '4px' }}>
-                  <div style={{
-                    height: '100%',
-                    width: `${notebookMemos.length > 1 ? (sliderIndex / (notebookMemos.length - 1)) * 100 : 100}%`,
-                    background: 'var(--ion-color-primary)',
-                    borderRadius: '4px',
-                    transition: 'width 0.3s ease'
-                  }} />
+              <div className="progress-slider-wrapper">
+                <div className="progress-track-bg">
+                  <div
+                    className="progress-track-fill"
+                    style={{
+                      width: `${notebookMemos.length > 1 ? (sliderIndex / (notebookMemos.length - 1)) * 100 : 100}%`
+                    }}
+                  />
                 </div>
 
                 {hasDragged && originalIndex !== null && notebookMemos.length > 1 && (
                   <div
                     data-testid="original-index-marker"
+                    className="original-index-marker"
                     style={{
-                      position: 'absolute',
-                      top: '50%',
-                      left: `${(originalIndex / (notebookMemos.length - 1)) * 100}%`,
-                      transform: 'translate(-50%, -50%)',
-                      width: '4px',
-                      height: '16px',
-                      background: 'var(--ion-color-medium)',
-                      borderRadius: '2px',
-                      zIndex: 1,
-                      pointerEvents: 'none'
-                    }} />
+                      left: `${(originalIndex / (notebookMemos.length - 1)) * 100}%`
+                    }}
+                  />
                 )}
 
                 <input
                   type="range"
+                  className="progress-slider-input"
                   min={0}
                   max={notebookMemos.length > 1 ? notebookMemos.length - 1 : 0}
                   value={sliderIndex}
@@ -209,46 +202,25 @@ const NotebookPage: React.FC = () => {
                       swiperInstance.slideTo(newIndex);
                     }
                   }}
-                  style={{
-                    position: 'absolute',
-                    top: 0,
-                    left: 0,
-                    width: '100%',
-                    height: '100%',
-                    margin: 0,
-                    opacity: 0,
-                    cursor: 'pointer',
-                    zIndex: 3
-                  }}
                 />
 
                 {notebookMemos.length > 1 && (
-                  <div style={{
-                    position: 'absolute',
-                    top: '50%',
-                    left: `${(sliderIndex / (notebookMemos.length - 1)) * 100}%`,
-                    transform: 'translate(-50%, -50%)',
-                    width: '16px',
-                    height: '16px',
-                    background: 'var(--ion-background-color, #fff)',
-                    border: '2px solid var(--ion-color-primary)',
-                    borderRadius: '50%',
-                    zIndex: 2,
-                    pointerEvents: 'none',
-                    transition: 'left 0.3s ease',
-                    boxShadow: '0 2px 4px rgba(0,0,0,0.2)'
-                  }} />
+                  <div
+                    className="progress-slider-thumb"
+                    style={{
+                      left: `${(sliderIndex / (notebookMemos.length - 1)) * 100}%`
+                    }}
+                  />
                 )}
               </div>
 
               <IonButton
                 data-testid="reset-progress-button"
+                className="reset-progress-button"
                 fill="clear"
                 size="small"
                 style={{
-                  visibility: hasDragged ? 'visible' : 'hidden',
-                  '--padding-start': '4px',
-                  '--padding-end': '4px'
+                  visibility: hasDragged ? 'visible' : 'hidden'
                 }}
                 onClick={() => {
                   if (hasDragged && originalIndex !== null && swiperInstance) {
@@ -268,7 +240,7 @@ const NotebookPage: React.FC = () => {
               }}
               modules={[Virtual]}
               virtual={{ addSlidesBefore: 2, addSlidesAfter: 2 }}
-              style={{ flex: 1, width: '100%', height: '100%' }}
+              className="swiper-container"
               initialSlide={currentIndex >= 0 ? currentIndex : 0}
               onSlideChangeTransitionEnd={(swiper) => {
                 const newMemo = notebookMemos[swiper.activeIndex];
@@ -281,27 +253,15 @@ const NotebookPage: React.FC = () => {
               }}
             >
               {notebookMemos.map((memo, index) => (
-                <SwiperSlide key={memo.id} virtualIndex={index} style={{ boxSizing: 'border-box', display: 'flex', justifyContent: 'center' }}>
+                <SwiperSlide key={memo.id} virtualIndex={index} className="swiper-slide-content">
                   <div
                     onClick={() => handleToggleExplanation()}
-                    style={{
-                      height: '100%',
-                      width: 'calc(100% - 6px)',
-                      background: 'var(--surface)',
-                      borderRadius: '16px',
-                      padding: '24px',
-                      boxShadow: 'var(--shadow)',
-                      position: 'relative',
-                      display: 'flex',
-                      flexDirection: 'column',
-                      cursor: 'pointer',
-                      overflowY: 'auto'
-                    }}
+                    className="memo-card"
                   >
                     <IonButton
                       fill="clear"
                       color="medium"
-                      style={{ position: 'absolute', top: '8px', right: '8px', zIndex: 10 }}
+                      className="memo-card-menu-btn"
                       onClick={(e) => {
                         e.stopPropagation();
                         setMemoActionSheet(memo);
@@ -310,24 +270,12 @@ const NotebookPage: React.FC = () => {
                       <IonIcon slot="icon-only" icon={ellipsisVertical} />
                     </IonButton>
 
-                    <div
-                      style={{ fontSize: '1.5rem', fontWeight: 'bold', marginBottom: '16px', wordBreak: 'break-word', paddingRight: '32px', textAlign: 'left' }}
-                    >
+                    <div className="memo-card-text">
                       {memo.originalText}
                     </div>
 
                     {(alwaysShowExplanation || (showExplanation && memo.id === currentMemo?.id)) && (
-                      <div
-                        style={{
-                          fontSize: '1.1rem',
-                          color: 'var(--text-muted)',
-                          borderTop: '1px solid var(--border-color)',
-                          paddingTop: '16px',
-                          whiteSpace: 'pre-line',
-                          wordBreak: 'break-word',
-                          textAlign: 'left'
-                        }}
-                      >
+                      <div className="memo-card-explanation">
                         {memo.explanation}
                       </div>
                     )}
@@ -338,7 +286,7 @@ const NotebookPage: React.FC = () => {
           </div>
         ) : null}
 
-        <IonFab vertical="bottom" horizontal="end" slot="fixed" style={{ marginBottom: '72px' }}>
+        <IonFab vertical="bottom" horizontal="end" slot="fixed" className="fab-secondary-container">
           <IonFabButton className="fab--secondary" color="secondary" onClick={() => { setEditingMemo(null); setAddMode('paste'); setIsAddOpen(true); }}>
             <IonIcon icon={clipboardOutline} />
           </IonFabButton>

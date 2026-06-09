@@ -9,6 +9,8 @@ import { useApp } from '../data/AppContext';
 import { Notebook } from '../models';
 import AddNotebookOverlay from '../components/AddNotebookOverlay';
 
+import './HomePage.scss';
+
 const HomePage: React.FC = () => {
   const { activeNotebooks, memos, deleteNotebook, editNotebook, addNotebook } = useApp();
 
@@ -81,8 +83,8 @@ const HomePage: React.FC = () => {
         </IonHeader>
 
         {activeNotebooks.length === 0 ? (
-          <div className="ion-text-center ion-padding" style={{ marginTop: '50px' }}>
-            <p style={{ color: 'var(--text-muted)' }}>No notebooks yet. Create one to get started!</p>
+          <div className="ion-text-center ion-padding empty-notebooks-container">
+            <p className="empty-notebooks-text">No notebooks yet. Create one to get started!</p>
           </div>
         ) : (
           <IonList>

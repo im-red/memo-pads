@@ -5,6 +5,7 @@ import {
 } from '@ionic/react';
 import { useApp } from '../data/AppContext';
 import { exportData } from '../util/importUtils';
+import './ExportOverlay.scss';
 
 interface ExportOverlayProps {
   isOpen: boolean;
@@ -76,7 +77,7 @@ const ExportOverlay: React.FC<ExportOverlayProps> = ({ isOpen, onClose }) => {
         </IonToolbar>
       </IonHeader>
       <IonContent className="ion-padding">
-        <div className="ion-margin-bottom" style={{ display: 'flex', gap: '8px' }}>
+        <div className="ion-margin-bottom button-group-row">
           <IonButton fill="outline" size="small" onClick={handleSelectAll}>Select All</IonButton>
           <IonButton fill="outline" size="small" onClick={handleDeselectAll}>Deselect All</IonButton>
         </div>

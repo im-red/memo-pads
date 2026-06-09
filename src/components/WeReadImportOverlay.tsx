@@ -7,6 +7,7 @@ import {
 import { Memo } from '../models';
 import { parseWeReadNotes, WeReadNote } from '../util/wereadParser';
 import { useApp } from '../data/AppContext';
+import './WeReadImportOverlay.scss';
 
 interface WeReadImportOverlayProps {
   isOpen: boolean;
@@ -188,13 +189,13 @@ const WeReadImportOverlay: React.FC<WeReadImportOverlayProps> = ({ isOpen, onClo
                     ref={fileInputRef}
                     type="file"
                     accept=".txt,text/plain"
-                    style={{ display: 'none' }}
+                    className="hidden-file-input"
                     onChange={handleFileChange}
                   />
                   <IonButton expand="block" onClick={() => fileInputRef.current?.click()}>
                     Select WeRead Notes File
                   </IonButton>
-                  <IonText color="medium" className="ion-margin-top" style={{ display: 'block' }}>
+                  <IonText color="medium" className="ion-margin-top block-text">
                     <small>Select a text file exported from WeRead containing your notes.</small>
                   </IonText>
                 </div>
@@ -249,13 +250,13 @@ const WeReadImportOverlay: React.FC<WeReadImportOverlayProps> = ({ isOpen, onClo
 
             {error && <IonText color="danger" className="ion-text-center"><p>{error}</p></IonText>}
 
-            <div className="ion-margin-top" style={{ display: 'flex', gap: '8px' }}>
-              <IonButton fill="outline" expand="block" style={{ flex: 1 }} onClick={resetState}>
+            <div className="ion-margin-top button-group-row">
+              <IonButton fill="outline" expand="block" className="flex-button" onClick={resetState}>
                 Back
               </IonButton>
               <IonButton
                 expand="block"
-                style={{ flex: 1 }}
+                className="flex-button"
                 onClick={handleConfirm}
                 disabled={preview?.newMemos === 0 || !selectedNotebookId}
               >
