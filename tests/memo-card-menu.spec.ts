@@ -32,15 +32,8 @@ test('clicking memo card menu does not toggle explanation visibility', async ({ 
   await headerMenuBtn.click();
   await page.waitForTimeout(300);
 
-  await page.evaluate(() => {
-    const actionSheets = Array.from(document.querySelectorAll('ion-action-sheet'));
-    const activeSheet = actionSheets.find(sheet => !sheet.classList.contains('overlay-hidden'));
-    if (activeSheet) {
-      const buttons = Array.from(activeSheet.querySelectorAll('button.action-sheet-button'));
-      const alwaysShowBtn = buttons.find(b => b.textContent?.includes('Always show explanation')) as HTMLButtonElement;
-      if (alwaysShowBtn) alwaysShowBtn.click();
-    }
-  });
+  await page.locator('ion-toggle').click();
+  await page.keyboard.press('Escape');
   await page.waitForTimeout(500);
 
   const explanation = page.locator('.swiper-slide-active div').filter({ hasText: /^Test Explanation$/ });

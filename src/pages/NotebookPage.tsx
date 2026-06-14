@@ -2,10 +2,11 @@ import React, { useState, useMemo, useEffect, useRef, useCallback, useSyncExtern
 import { useParams, useHistory } from 'react-router-dom';
 import {
   IonPage, IonHeader, IonToolbar, IonTitle, IonButtons, IonBackButton,
-  IonContent, IonButton, IonIcon, IonFab, IonFabButton, IonActionSheet, IonText, useIonAlert, useIonToast
+  IonContent, IonButton, IonIcon, IonFab, IonFabButton, IonActionSheet, IonText, useIonAlert, useIonToast,
+  IonPopover, IonItem, IonToggle, IonLabel
 } from '@ionic/react';
 import {
-  add, ellipsisVertical, checkmarkCircle, create, trash, clipboardOutline, refresh, close
+  add, ellipsisVertical, create, trash, clipboard, refresh, close
 } from 'ionicons/icons';
 import { Swiper, SwiperSlide } from 'swiper/react';
 import { Virtual } from 'swiper/modules';
@@ -161,10 +162,11 @@ const NotebookPage: React.FC = () => {
 
   const sliderIndex = hasDragged ? dragSliderIndex : (currentIndex >= 0 ? currentIndex : 0);
 
-  const handleToggleAlwaysShow = () => {
+  const handleToggleAlwaysShow = (e?: CustomEvent) => {
+    const checked = e?.detail?.checked ?? !alwaysShowExplanation;
     updateProgress(notebookId, {
-      alwaysShowExplanation: !alwaysShowExplanation,
-      showExplanation: !alwaysShowExplanation ? true : showExplanation
+      alwaysShowExplanation: checked,
+      showExplanation: checked ? true : showExplanation
     });
   };
 
@@ -392,7 +394,7 @@ const NotebookPage: React.FC = () => {
 
         <IonFab vertical="bottom" horizontal="end" slot="fixed" className="fab-secondary-container">
           <IonFabButton className="fab--secondary" color="secondary" onClick={() => { setEditingMemo(null); setAddMode('paste'); setIsAddOpen(true); }}>
-            <IonIcon icon={clipboardOutline} />
+            <IonIcon icon={clipboard} />
           </IonFabButton>
         </IonFab>
         <IonFab vertical="bottom" horizontal="end" slot="fixed">
@@ -401,21 +403,12 @@ const NotebookPage: React.FC = () => {
           </IonFabButton>
         </IonFab>
 
-        <IonActionSheet
-          isOpen={isMenuOpen}
-          onDidDismiss={() => setIsMenuOpen(false)}
-          buttons={[
-            {
-              text: `Always show explanation`,
-              icon: alwaysShowExplanation ? checkmarkCircle : undefined,
-              handler: handleToggleAlwaysShow
-            },
-            {
-              text: 'Cancel',
-              role: 'cancel'
-            }
-          ]}
-        />
+        <IonPopover isOpen={isMenuOpen} onDidDismiss={() => setIsMenuOpen(false)}>
+          <IonItem lines="none">
+            <IonLabel>Always show explanation</IonLabel>
+            <IonToggle slot="end" checked={alwaysShowExplanation} onIonChange={handleToggleAlwaysShow} />
+          </IonItem>
+        </IonPopover>
 
         <IonActionSheet
           isOpen={!!memoActionSheet}
@@ -423,7 +416,7 @@ const NotebookPage: React.FC = () => {
           buttons={[
             {
               text: 'Copy',
-              icon: clipboardOutline,
+              icon: clipboard,
               handler: handleCopyAll
             },
             {

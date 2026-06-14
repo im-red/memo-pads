@@ -4,7 +4,7 @@ import {
   IonContent, IonList, IonItem, IonCheckbox, IonLabel, IonNote, IonText, IonBadge
 } from '@ionic/react';
 import { Notebook, Memo } from '../models';
-import { computeImportPreview, executeImport } from '../util/importUtils';
+import { computeImportPreview, executeImport } from '../utils/importUtils';
 import { useApp } from '../data/AppContext';
 import './ImportOverlay.scss';
 

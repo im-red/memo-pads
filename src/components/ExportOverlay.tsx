@@ -4,7 +4,7 @@ import {
   IonContent, IonList, IonItem, IonCheckbox, IonLabel, IonText
 } from '@ionic/react';
 import { useApp } from '../data/AppContext';
-import { exportData } from '../util/importUtils';
+import { exportData } from '../utils/importUtils';
 import './ExportOverlay.scss';
 
 interface ExportOverlayProps {

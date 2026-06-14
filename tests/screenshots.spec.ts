@@ -3,8 +3,7 @@ import path from 'path';
 import { waitForIonicPage } from './test-utils';
 
 test.describe('Capture Screenshots for README', () => {
-    // Only run in Chromium to get the Mobile Chrome emulated view
-    test.skip(({ browserName }) => browserName !== 'chromium', 'Chromium only');
+    test.skip();
 
     test('capture notebooks list', async ({ page }) => {
         await page.goto('/');

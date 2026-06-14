@@ -5,7 +5,7 @@ import {
   IonSegment, IonSegmentButton, IonTextarea
 } from '@ionic/react';
 import { Memo } from '../models';
-import { parseWeReadNotes, WeReadNote } from '../util/wereadParser';
+import { parseWeReadNotes, WeReadNote } from '../utils/wereadParser';
 import { useApp } from '../data/AppContext';
 import './WeReadImportOverlay.scss';
 

@@ -20,3 +20,11 @@ body {
     justify-content: center;
   }
 }
+
+.action-sheet-container .action-sheet-button.action-sheet-destructive {
+  color: var(--ion-color-danger);
+}
+
+.action-sheet-container .action-sheet-button.action-sheet-cancel {
+  color: var(--ion-color-step-400);
+}

@@ -72,15 +72,7 @@ test.describe('Memo Content Scrolling on Mobile', () => {
     await headerMenuBtn.click();
     await page.waitForTimeout(300);
 
-    await page.evaluate(() => {
-      const actionSheets = Array.from(document.querySelectorAll('ion-action-sheet'));
-      const activeSheet = actionSheets.find(sheet => !sheet.classList.contains('overlay-hidden'));
-      if (activeSheet) {
-        const buttons = Array.from(activeSheet.querySelectorAll('button.action-sheet-button'));
-        const alwaysShowBtn = buttons.find(b => b.textContent?.includes('Always show explanation')) as HTMLButtonElement;
-        if (alwaysShowBtn) alwaysShowBtn.click();
-      }
-    });
+    await page.locator('ion-toggle').click();
     await page.waitForTimeout(500);
 
     const contentElement = page.locator('.swiper-slide-active > div').first();
@@ -129,15 +121,7 @@ test.describe('Memo Content Scrolling on Mobile', () => {
     await headerMenuBtn.click();
     await page.waitForTimeout(300);
 
-    await page.evaluate(() => {
-      const actionSheets = Array.from(document.querySelectorAll('ion-action-sheet'));
-      const activeSheet = actionSheets.find(sheet => !sheet.classList.contains('overlay-hidden'));
-      if (activeSheet) {
-        const buttons = Array.from(activeSheet.querySelectorAll('button.action-sheet-button'));
-        const alwaysShowBtn = buttons.find(b => b.textContent?.includes('Always show explanation')) as HTMLButtonElement;
-        if (alwaysShowBtn) alwaysShowBtn.click();
-      }
-    });
+    await page.locator('ion-toggle').click();
     await page.waitForTimeout(500);
 
     const viewport = await page.evaluate(() => ({
@@ -260,25 +244,27 @@ test.describe('Memo Content Scrolling on Mobile', () => {
     await headerMenuBtn.click();
     await page.waitForTimeout(300);
 
-    // Check that the option is not checked initially (no checkmark icon)
-    const menuItem = page.locator('ion-action-sheet button').filter({ hasText: 'Always show explanation' });
-    await expect(menuItem).toBeVisible();
-    const initialIcon = await menuItem.locator('ion-icon').count();
-    expect(initialIcon).toBe(0);
+    // Check that the toggle is not checked initially
+    const toggle = page.locator('ion-toggle');
+    await expect(toggle).toBeVisible();
+    await expect(toggle).not.toBeChecked();
 
     // Click to enable
-    await menuItem.click();
-    await page.waitForTimeout(500);
+    await toggle.click();
+    await page.waitForTimeout(300);
+
+    // Dismiss the popover
+    await page.keyboard.press('Escape');
+    await page.waitForTimeout(300);
 
     // Explanation should now be visible
     await expect(explanation).toBeVisible();
 
-    // Open menu again and verify checkmark icon is present
+    // Open menu again and verify toggle is checked
     await headerMenuBtn.click();
     await page.waitForTimeout(300);
-    const checkedMenuItem = page.locator('ion-action-sheet button').filter({ hasText: 'Always show explanation' });
-    const hasIcon = await checkedMenuItem.locator('ion-icon').count();
-    expect(hasIcon).toBeGreaterThan(0);
+    const toggleChecked = page.locator('ion-toggle');
+    await expect(toggleChecked).toBeChecked();
 
     console.log('✓ Always show explanation menu option toggles correctly');
   });
@@ -343,15 +329,8 @@ test.describe('Memo Content Scrolling on Mobile', () => {
     await headerMenuBtn.click();
     await page.waitForTimeout(300);
 
-    await page.evaluate(() => {
-      const actionSheets = Array.from(document.querySelectorAll('ion-action-sheet'));
-      const activeSheet = actionSheets.find(sheet => !sheet.classList.contains('overlay-hidden'));
-      if (activeSheet) {
-        const buttons = Array.from(activeSheet.querySelectorAll('button.action-sheet-button'));
-        const alwaysShowBtn = buttons.find(b => b.textContent?.includes('Always show explanation')) as HTMLButtonElement;
-        if (alwaysShowBtn) alwaysShowBtn.click();
-      }
-    });
+    await page.locator('ion-toggle').click();
+    await page.keyboard.press('Escape');
     await page.waitForTimeout(500);
 
     // Explanation should be visible
