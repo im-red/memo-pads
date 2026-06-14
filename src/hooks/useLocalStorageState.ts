@@ -1,4 +1,4 @@
-import { Dispatch, SetStateAction, useEffect, useState } from 'react';
+import { Dispatch, SetStateAction, useCallback, useEffect, useState } from 'react';
 
 const isFunction = <T,>(value: T | ((prevState: T) => T)): value is (prevState: T) => T =>
   typeof value === 'function';
@@ -28,12 +28,12 @@ const useLocalStorageState = <T,>(
     window.localStorage.setItem(key, JSON.stringify(state));
   }, [key, state]);
 
-  const setValue: Dispatch<SetStateAction<T>> = value => {
+  const setValue = useCallback<Dispatch<SetStateAction<T>>>(value => {
     setState(prev => {
       const next = isFunction(value) ? value(prev) : value;
       return next;
     });
-  };
+  }, [setState]);
 
   return [state, setValue];
 };

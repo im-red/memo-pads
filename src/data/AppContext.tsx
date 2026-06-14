@@ -21,31 +21,39 @@ const generateId = () => {
   return crypto.randomUUID ? crypto.randomUUID() : Math.random().toString(36).slice(2) + Date.now().toString(36);
 };
 
+// ── App context (data + callbacks, excludes viewProgress) ──
+
 interface AppContextType {
   notebooks: Notebook[];
   activeNotebooks: Notebook[];
   memos: Memo[];
-  viewProgress: Record<string, ViewProgress>;
-  
+
   addNotebook: (name: string) => Promise<void>;
   editNotebook: (notebook: Notebook) => void;
   deleteNotebook: (id: string) => Promise<void>;
   restoreNotebook: (id: string) => Promise<void>;
   permanentDeleteNotebook: (id: string) => Promise<void>;
-  
+
   addMemo: (notebookId: string, originalText: string, explanation: string) => Promise<void>;
   editMemo: (memo: Memo) => Promise<void>;
   deleteMemo: (id: string) => Promise<void>;
   restoreMemo: (id: string) => Promise<void>;
   permanentDeleteMemo: (id: string) => Promise<void>;
-  
-  updateProgress: (notebookId: string, updates: Partial<ViewProgress>) => void;
-  
+
   importData: (newNotebooks: Notebook[], newMemos: Memo[], updatedNotebooks: Notebook[]) => void;
   weReadImport: (newMemos: Memo[], targetNotebookId: string) => void;
 }
 
 const AppContext = createContext<AppContextType | null>(null);
+
+// ── Progress context (volatile — changes every swipe, only NotebookPage reads it) ──
+
+interface ProgressContextType {
+  viewProgress: Record<string, ViewProgress>;
+  updateProgress: (notebookId: string, updates: Partial<ViewProgress>) => void;
+}
+
+const ProgressContext = createContext<ProgressContextType | null>(null);
 
 export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
   const [notebooks, setNotebooks] = useLocalStorageState<Notebook[]>(NOTEBOOKS_KEY, []);
@@ -55,6 +63,8 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
   const activeNotebooks = useMemo(() => notebooks.filter(n => !n.isDeleted), [notebooks]);
 
   const updateProgress = useCallback((notebookId: string, updates: Partial<ViewProgress>) => {
+    console.log('updateProgress', notebookId, updates);
+    console.time('updateProgress');
     setViewProgress(prev => ({
       ...prev,
       [notebookId]: {
@@ -66,6 +76,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
         ...updates
       }
     }));
+    console.timeEnd('updateProgress');
   }, [setViewProgress]);
 
   const addNotebook = useCallback(async (name: string) => {
@@ -176,9 +187,9 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
       version: 1,
       deviceId: getDeviceId()
     };
-    
+
     setMemos(prev => [...prev, newMemo]);
-    
+
     const progress = viewProgress[notebookId];
     if (!progress || !progress.currentMemoId) {
       updateProgress(notebookId, { currentMemoId: newMemo.id });
@@ -204,9 +215,9 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
   const deleteMemo = useCallback(async (memoId: string) => {
     const now = new Date().toISOString();
     const deviceId = getDeviceId();
-    
+
     const memoToDelete = memos.find(m => m.id === memoId);
-    
+
     setMemos(prev => prev.map(m =>
       m.id === memoId
         ? { ...m, isDeleted: true, deletedAt: now, deletedBy: deviceId, updatedAt: now, version: (m.version || 1) + 1 }
@@ -221,7 +232,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
           if (timeCompare !== 0) return timeCompare;
           return a.importOrder - b.importOrder;
         });
-        
+
       if (notebookMemos.length > 0) {
         const oldMemos = memos.filter(m => m.notebookId === notebookId && !m.isDeleted)
           .sort((a, b) => {
@@ -284,27 +295,40 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     setMemos(prev => [...prev, ...memosWithNotebookId]);
   }, [setMemos]);
 
+  // Memoize contexts separately — viewProgress changes don't invalidate AppContext
+  const appContextValue = useMemo<AppContextType>(() => ({
+    notebooks,
+    activeNotebooks,
+    memos,
+    addNotebook,
+    editNotebook,
+    deleteNotebook,
+    restoreNotebook,
+    permanentDeleteNotebook,
+    addMemo,
+    editMemo,
+    deleteMemo,
+    restoreMemo,
+    permanentDeleteMemo,
+    importData,
+    weReadImport,
+  }), [
+    notebooks, activeNotebooks, memos,
+    addNotebook, editNotebook, deleteNotebook, restoreNotebook, permanentDeleteNotebook,
+    addMemo, editMemo, deleteMemo, restoreMemo, permanentDeleteMemo,
+    importData, weReadImport,
+  ]);
+
+  const progressContextValue = useMemo<ProgressContextType>(() => ({
+    viewProgress,
+    updateProgress,
+  }), [viewProgress, updateProgress]);
+
   return (
-    <AppContext.Provider value={{
-      notebooks,
-      activeNotebooks,
-      memos,
-      viewProgress,
-      addNotebook,
-      editNotebook,
-      deleteNotebook,
-      restoreNotebook,
-      permanentDeleteNotebook,
-      addMemo,
-      editMemo,
-      deleteMemo,
-      restoreMemo,
-      permanentDeleteMemo,
-      updateProgress,
-      importData,
-      weReadImport
-    }}>
-      {children}
+    <AppContext.Provider value={appContextValue}>
+      <ProgressContext.Provider value={progressContextValue}>
+        {children}
+      </ProgressContext.Provider>
     </AppContext.Provider>
   );
 };
@@ -312,5 +336,11 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
 export const useApp = () => {
   const ctx = useContext(AppContext);
   if (!ctx) throw new Error('useApp must be used within AppProvider');
+  return ctx;
+};
+
+export const useProgress = () => {
+  const ctx = useContext(ProgressContext);
+  if (!ctx) throw new Error('useProgress must be used within AppProvider');
   return ctx;
 };

@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useEffect, useRef } from 'react';
+import React, { useState, useMemo, useEffect, useRef, useCallback, useSyncExternalStore } from 'react';
 import { useParams, useHistory } from 'react-router-dom';
 import {
   IonPage, IonHeader, IonToolbar, IonTitle, IonButtons, IonBackButton,
@@ -14,16 +14,109 @@ import 'swiper/css/virtual';
 import '@ionic/react/css/ionic-swiper.css';
 import { Clipboard } from '@capacitor/clipboard';
 import { Haptics, ImpactStyle } from '@capacitor/haptics';
-import { useApp } from '../data/AppContext';
+import { useApp, useProgress } from '../data/AppContext';
 import { Memo } from '../models';
 import AddMemoOverlay from '../components/AddMemoOverlay';
+import { ScopedTimer } from '../utils/debug';
 
 import './NotebookPage.scss';
 
+/**
+ * External stores for volatile slide state — avoids passing changing values as props
+ * to all 1086 slides, which would invalidate useMemo every swipe.
+ * Stores are updated in rAF BEFORE React state commits.
+ */
+let _currentMemoId: string | null = null;
+const _currentMemoIdListeners = new Set<() => void>();
+const currentMemoIdStore = {
+  get: () => _currentMemoId,
+  set: (id: string | null) => { _currentMemoId = id; _currentMemoIdListeners.forEach(fn => fn()); },
+  subscribe: (fn: () => void) => { _currentMemoIdListeners.add(fn); return () => { _currentMemoIdListeners.delete(fn); }; },
+};
+
+let _showExplanationStore = false;
+const _showExplanationListeners = new Set<() => void>();
+const showExplanationStore = {
+  get: () => _showExplanationStore,
+  set: (v: boolean) => { _showExplanationStore = v; _showExplanationListeners.forEach(fn => fn()); },
+  subscribe: (fn: () => void) => { _showExplanationListeners.add(fn); return () => { _showExplanationListeners.delete(fn); }; },
+};
+
+let _alwaysShowExplanationStore = false;
+const _alwaysShowExplanationListeners = new Set<() => void>();
+const alwaysShowExplanationStore = {
+  get: () => _alwaysShowExplanationStore,
+  set: (v: boolean) => { _alwaysShowExplanationStore = v; _alwaysShowExplanationListeners.forEach(fn => fn()); },
+  subscribe: (fn: () => void) => { _alwaysShowExplanationListeners.add(fn); return () => { _alwaysShowExplanationListeners.delete(fn); }; },
+};
+
+interface MemoSlideContentProps {
+  memo: Memo;
+  onToggleExplanation: () => void;
+  onMenuAction: (memo: Memo) => void;
+  onCopyText: (text: string) => void;
+}
+
+const MemoSlideContent = React.memo(({
+  memo, onToggleExplanation, onMenuAction, onCopyText,
+}: MemoSlideContentProps) => {
+  const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const currentMemoId_ = useSyncExternalStore(currentMemoIdStore.subscribe, currentMemoIdStore.get);
+  const isCurrent = memo.id === currentMemoId_;
+  const showExplanation_ = useSyncExternalStore(showExplanationStore.subscribe, showExplanationStore.get);
+  const alwaysShowExplanation_ = useSyncExternalStore(alwaysShowExplanationStore.subscribe, alwaysShowExplanationStore.get);
+  const showExplanationContent = alwaysShowExplanation_ || (showExplanation_ && isCurrent);
+
+  const handlers = useMemo(() => {
+    const makeHandlers = (text: string) => ({
+      onTouchStart: () => { timerRef.current = setTimeout(() => onCopyText(text), 600); },
+      onTouchEnd: () => { if (timerRef.current) { clearTimeout(timerRef.current); timerRef.current = null; } },
+      onTouchMove: () => { if (timerRef.current) { clearTimeout(timerRef.current); timerRef.current = null; } },
+    });
+    return {
+      textHandlers: makeHandlers(memo.originalText),
+      explanationHandlers: makeHandlers(memo.explanation),
+    };
+  }, [memo.originalText, memo.explanation, onCopyText]);
+
+  return (
+    <div onClick={onToggleExplanation} className="memo-card">
+      <IonButton fill="clear" color="medium" className="memo-card-menu-btn"
+        onClick={(e) => { e.stopPropagation(); onMenuAction(memo); }}>
+        <IonIcon slot="icon-only" icon={ellipsisVertical} />
+      </IonButton>
+      <div className="memo-card-text" {...handlers.textHandlers}>
+        {memo.originalText}
+      </div>
+      {(showExplanationContent) && (
+        <div className="memo-card-explanation" {...handlers.explanationHandlers}>
+          {memo.explanation}
+        </div>
+      )}
+    </div>
+  );
+});
+
 const NotebookPage: React.FC = () => {
+  using _ = new ScopedTimer('NotebookPage render');
   const { id: notebookId } = useParams<{ id: string }>();
   const history = useHistory();
-  const { notebooks, memos, viewProgress, updateProgress, deleteMemo, addMemo, editMemo } = useApp();
+  const { notebooks, memos, deleteMemo, addMemo, editMemo } = useApp();
+  const { viewProgress, updateProgress } = useProgress();
+
+  const showExplanation = useMemo(() => viewProgress[notebookId]?.showExplanation ?? false, [viewProgress, notebookId]);
+  const alwaysShowExplanation = useMemo(() => viewProgress[notebookId]?.alwaysShowExplanation ?? false, [viewProgress, notebookId]);
+  const currentMemoId = useMemo(() => viewProgress[notebookId]?.currentMemoId ?? null, [viewProgress, notebookId]);
+
+  // Sync stores post-commit so MemoSlideContent sees latest values.
+  // For swipe: stores are already set in rAF, this is a no-op.
+  // For tap-to-toggle: this is the primary sync path.
+  useEffect(() => {
+    currentMemoIdStore.set(currentMemoId);
+    showExplanationStore.set(showExplanation);
+    alwaysShowExplanationStore.set(alwaysShowExplanation);
+  }, [currentMemoId, showExplanation, alwaysShowExplanation]);
 
   const [isAddOpen, setIsAddOpen] = useState(false);
   const [addMode, setAddMode] = useState<'add' | 'paste'>('add');
@@ -42,11 +135,6 @@ const NotebookPage: React.FC = () => {
         return a.importOrder - b.importOrder;
       });
   }, [memos, notebookId]);
-
-  const progress = viewProgress[notebookId];
-  const showExplanation = progress?.showExplanation ?? false;
-  const alwaysShowExplanation = progress?.alwaysShowExplanation ?? false;
-  const currentMemoId = progress?.currentMemoId ?? null;
 
   const initialMemoId = useMemo(() => {
     if (notebookMemos.length === 0) return null;
@@ -68,19 +156,10 @@ const NotebookPage: React.FC = () => {
   const [originalIndex, setOriginalIndex] = useState<number | null>(null);
   const [hasDragged, setHasDragged] = useState(false);
   const [swiperInstance, setSwiperInstance] = useState<any>(null);
-  const [sliderIndex, setSliderIndex] = useState(currentIndex >= 0 ? currentIndex : 0);
+  const [dragSliderIndex, setDragSliderIndex] = useState(currentIndex >= 0 ? currentIndex : 0);
+  const sliderIndexRef = useRef(currentIndex >= 0 ? currentIndex : 0);
 
-  useEffect(() => {
-    if (currentIndex >= 0) {
-      setSliderIndex(currentIndex);
-    }
-  }, [currentIndex]);
-
-  useEffect(() => {
-    if (originalIndex === null && currentIndex >= 0) {
-      setOriginalIndex(currentIndex);
-    }
-  }, [currentIndex, originalIndex]);
+  const sliderIndex = hasDragged ? dragSliderIndex : (currentIndex >= 0 ? currentIndex : 0);
 
   const handleToggleAlwaysShow = () => {
     updateProgress(notebookId, {
@@ -89,9 +168,12 @@ const NotebookPage: React.FC = () => {
     });
   };
 
-  const handleToggleExplanation = () => {
-    updateProgress(notebookId, { showExplanation: !showExplanation });
-  };
+  const showExplanationRef = useRef(showExplanation);
+  showExplanationRef.current = showExplanation;
+
+  const handleToggleExplanation = useCallback(() => {
+    updateProgress(notebookId, { showExplanation: !showExplanationRef.current });
+  }, [notebookId, updateProgress]);
 
   const handleAdd = async (originalText: string, explanation: string) => {
     await addMemo(notebookId, originalText, explanation);
@@ -104,9 +186,7 @@ const NotebookPage: React.FC = () => {
   const [presentAlert] = useIonAlert();
   const [presentToast] = useIonToast();
 
-  const longPressTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-
-  const handleCopyText = async (text: string) => {
+  const handleCopyText = useCallback(async (text: string) => {
     await Clipboard.write({ string: text });
     await Haptics.impact({ style: ImpactStyle.Medium });
     presentToast({
@@ -115,7 +195,7 @@ const NotebookPage: React.FC = () => {
       position: 'bottom',
       color: 'medium',
     });
-  };
+  }, [presentToast]);
 
   const handleCopyAll = async () => {
     if (!memoActionSheet) return;
@@ -123,26 +203,6 @@ const NotebookPage: React.FC = () => {
     await handleCopyText(text);
     setMemoActionSheet(null);
   };
-
-  const createLongPressHandlers = (text: string) => ({
-    onTouchStart: () => {
-      longPressTimerRef.current = setTimeout(() => {
-        handleCopyText(text);
-      }, 600);
-    },
-    onTouchEnd: () => {
-      if (longPressTimerRef.current) {
-        clearTimeout(longPressTimerRef.current);
-        longPressTimerRef.current = null;
-      }
-    },
-    onTouchMove: () => {
-      if (longPressTimerRef.current) {
-        clearTimeout(longPressTimerRef.current);
-        longPressTimerRef.current = null;
-      }
-    },
-  });
 
   const handleDelete = (memoId: string) => {
     presentAlert({
@@ -160,6 +220,20 @@ const NotebookPage: React.FC = () => {
       ]
     });
   };
+
+  const slides = useMemo(() =>
+    notebookMemos.map((memo, index) => (
+      <SwiperSlide key={memo.id} virtualIndex={index} className="swiper-slide-content">
+        <MemoSlideContent
+          memo={memo}
+          onToggleExplanation={handleToggleExplanation}
+          onMenuAction={setMemoActionSheet}
+          onCopyText={handleCopyText}
+        />
+      </SwiperSlide>
+    )),
+    [notebookMemos, handleToggleExplanation, handleCopyText]
+  );
 
   if (!notebook && notebooks.length > 0) {
     history.replace('/');
@@ -238,11 +312,14 @@ const NotebookPage: React.FC = () => {
                   max={notebookMemos.length > 1 ? notebookMemos.length - 1 : 0}
                   value={sliderIndex}
                   onChange={(e) => {
+                    if (!hasDragged) {
+                      setOriginalIndex(sliderIndex);
+                    }
                     setHasDragged(true);
                     const newIndex = parseInt(e.target.value, 10);
-                    setSliderIndex(newIndex);
+                    setDragSliderIndex(newIndex);
                     if (swiperInstance) {
-                      swiperInstance.slideTo(newIndex);
+                      swiperInstance.slideTo(newIndex, 0);
                     }
                   }}
                 />
@@ -267,7 +344,14 @@ const NotebookPage: React.FC = () => {
                 }}
                 onClick={() => {
                   if (hasDragged && originalIndex !== null && swiperInstance) {
-                    swiperInstance.slideTo(originalIndex);
+                    const originalMemo = notebookMemos[originalIndex];
+                    if (originalMemo) {
+                      updateProgress(notebookId, {
+                        currentMemoId: originalMemo.id,
+                        showExplanation: alwaysShowExplanation
+                      });
+                    }
+                    swiperInstance.slideTo(originalIndex, 0);
                     setHasDragged(false);
                   }
                 }}
@@ -279,7 +363,7 @@ const NotebookPage: React.FC = () => {
             <Swiper
               onSwiper={setSwiperInstance}
               onSlideChange={(swiper) => {
-                setSliderIndex(swiper.activeIndex);
+                sliderIndexRef.current = swiper.activeIndex;
               }}
               modules={[Virtual]}
               virtual={{ addSlidesBefore: 2, addSlidesAfter: 2 }}
@@ -288,49 +372,20 @@ const NotebookPage: React.FC = () => {
               onSlideChangeTransitionEnd={(swiper) => {
                 const newMemo = notebookMemos[swiper.activeIndex];
                 if (newMemo) {
-                  updateProgress(notebookId, {
-                    currentMemoId: newMemo.id,
-                    showExplanation: alwaysShowExplanation
+                  const notebookId_ = notebookId;
+                  const alwaysShow = alwaysShowExplanation;
+                  requestAnimationFrame(() => {
+                    currentMemoIdStore.set(newMemo.id);
+                    showExplanationStore.set(alwaysShow);
+                    updateProgress(notebookId_, {
+                      currentMemoId: newMemo.id,
+                      showExplanation: alwaysShow
+                    });
                   });
                 }
               }}
             >
-              {notebookMemos.map((memo, index) => (
-                <SwiperSlide key={memo.id} virtualIndex={index} className="swiper-slide-content">
-                  <div
-                    onClick={() => handleToggleExplanation()}
-                    className="memo-card"
-                  >
-                    <IonButton
-                      fill="clear"
-                      color="medium"
-                      className="memo-card-menu-btn"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        setMemoActionSheet(memo);
-                      }}
-                    >
-                      <IonIcon slot="icon-only" icon={ellipsisVertical} />
-                    </IonButton>
-
-                    <div
-                      className="memo-card-text"
-                      {...createLongPressHandlers(memo.originalText)}
-                    >
-                      {memo.originalText}
-                    </div>
-
-                    {(alwaysShowExplanation || (showExplanation && memo.id === currentMemo?.id)) && (
-                      <div
-                        className="memo-card-explanation"
-                        {...createLongPressHandlers(memo.explanation)}
-                      >
-                        {memo.explanation}
-                      </div>
-                    )}
-                  </div>
-                </SwiperSlide>
-              ))}
+              {slides}
             </Swiper>
           </div>
         ) : null}
