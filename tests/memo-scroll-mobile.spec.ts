@@ -67,7 +67,7 @@ test.describe('Memo Content Scrolling on Mobile', () => {
 
     await addMemo(page, 'Short text', longExplanation);
 
-    // Enable "Always show explanation" via header menu
+    // Enable "Default show explanation" via header menu
     const headerMenuBtn = page.locator('ion-toolbar ion-button:has(ion-icon)').first();
     await headerMenuBtn.click();
     await page.waitForTimeout(300);
@@ -116,7 +116,7 @@ test.describe('Memo Content Scrolling on Mobile', () => {
 
     await addMemo(page, longText, longExplanation);
 
-    // Enable "Always show explanation" via header menu
+    // Enable "Default show explanation" via header menu
     const headerMenuBtn = page.locator('ion-toolbar ion-button:has(ion-icon)').first();
     await headerMenuBtn.click();
     await page.waitForTimeout(300);
@@ -224,13 +224,13 @@ test.describe('Memo Content Scrolling on Mobile', () => {
     }
   });
 
-  test('always show explanation menu option toggles correctly', async ({ page }) => {
+  test('default show explanation menu option toggles correctly', async ({ page }) => {
     if (!(await isMobile(page))) {
       test.skip();
     }
 
-    await createNotebook(page, 'Always Show Test');
-    await page.locator('ion-item:has-text("Always Show Test")').evaluate((el: any) => el.click());
+    await createNotebook(page, 'Default Show Test');
+    await page.locator('ion-item:has-text("Default Show Test")').evaluate((el: any) => el.click());
     await page.waitForSelector('ion-back-button', { state: 'visible' });
 
     await addMemo(page, 'Test memo', 'Test explanation');
@@ -239,7 +239,7 @@ test.describe('Memo Content Scrolling on Mobile', () => {
     const explanation = page.locator('.swiper-slide-active div').filter({ hasText: /^Test explanation$/ });
     await expect(explanation).not.toBeVisible();
 
-    // Open header menu and enable "Always show explanation"
+    // Open header menu and enable "Default show explanation"
     const headerMenuBtn = page.locator('ion-toolbar ion-button:has(ion-icon)').first();
     await headerMenuBtn.click();
     await page.waitForTimeout(300);
@@ -266,10 +266,10 @@ test.describe('Memo Content Scrolling on Mobile', () => {
     const toggleChecked = page.locator('ion-toggle');
     await expect(toggleChecked).toBeChecked();
 
-    console.log('✓ Always show explanation menu option toggles correctly');
+    console.log('✓ Default show explanation menu option toggles correctly');
   });
 
-  test('explanation hides on swipe when always show is disabled', async ({ page }) => {
+  test('explanation hides on swipe when default show is disabled', async ({ page }) => {
     if (!(await isMobile(page))) {
       test.skip();
     }
@@ -308,11 +308,11 @@ test.describe('Memo Content Scrolling on Mobile', () => {
       const nextExplanation = page.locator('.swiper-slide-active div').filter({ hasText: /^Second explanation$/ });
       await expect(nextExplanation).not.toBeVisible();
 
-      console.log('✓ Explanation hides on swipe when always show is disabled');
+      console.log('✓ Explanation hides on swipe when default show is disabled');
     }
   });
 
-  test('explanation stays visible on swipe when always show is enabled', async ({ page }) => {
+  test('explanation stays visible on swipe when default show is enabled', async ({ page }) => {
     if (!(await isMobile(page))) {
       test.skip();
     }
@@ -324,7 +324,7 @@ test.describe('Memo Content Scrolling on Mobile', () => {
     await addMemo(page, 'First memo', 'First explanation');
     await addMemo(page, 'Second memo', 'Second explanation');
 
-    // Enable "Always show explanation"
+    // Enable "Default show explanation"
     const headerMenuBtn = page.locator('ion-toolbar ion-button:has(ion-icon)').first();
     await headerMenuBtn.click();
     await page.waitForTimeout(300);
@@ -357,7 +357,7 @@ test.describe('Memo Content Scrolling on Mobile', () => {
       const nextExplanation = page.locator('.swiper-slide-active div').filter({ hasText: /^Second explanation$/ });
       await expect(nextExplanation).toBeVisible();
 
-      console.log('✓ Explanation stays visible on swipe when always show is enabled');
+      console.log('✓ Explanation stays visible on swipe when default show is enabled');
     }
   });
 });

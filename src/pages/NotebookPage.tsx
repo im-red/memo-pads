@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useEffect, useRef, useCallback, useSyncExternalStore } from 'react';
+import React, { useState, useMemo, useEffect, useRef, useCallback } from 'react';
 import { useParams, useHistory } from 'react-router-dom';
 import {
   IonPage, IonHeader, IonToolbar, IonTitle, IonButtons, IonBackButton,
@@ -18,56 +18,27 @@ import { Haptics, ImpactStyle } from '@capacitor/haptics';
 import { useApp, useProgress } from '../data/AppContext';
 import { Memo } from '../models';
 import AddMemoOverlay from '../components/AddMemoOverlay';
-import { ScopedTimer } from '../utils/debug';
+import { ScopedTimer, useWhyDidYouUpdate } from '../utils/debug';
 
 import './NotebookPage.scss';
 
-/**
- * External stores for volatile slide state — avoids passing changing values as props
- * to all 1086 slides, which would invalidate useMemo every swipe.
- * Stores are updated in rAF BEFORE React state commits.
- */
-let _currentMemoId: string | null = null;
-const _currentMemoIdListeners = new Set<() => void>();
-const currentMemoIdStore = {
-  get: () => _currentMemoId,
-  set: (id: string | null) => { _currentMemoId = id; _currentMemoIdListeners.forEach(fn => fn()); },
-  subscribe: (fn: () => void) => { _currentMemoIdListeners.add(fn); return () => { _currentMemoIdListeners.delete(fn); }; },
-};
-
-let _showExplanationStore = false;
-const _showExplanationListeners = new Set<() => void>();
-const showExplanationStore = {
-  get: () => _showExplanationStore,
-  set: (v: boolean) => { _showExplanationStore = v; _showExplanationListeners.forEach(fn => fn()); },
-  subscribe: (fn: () => void) => { _showExplanationListeners.add(fn); return () => { _showExplanationListeners.delete(fn); }; },
-};
-
-let _alwaysShowExplanationStore = false;
-const _alwaysShowExplanationListeners = new Set<() => void>();
-const alwaysShowExplanationStore = {
-  get: () => _alwaysShowExplanationStore,
-  set: (v: boolean) => { _alwaysShowExplanationStore = v; _alwaysShowExplanationListeners.forEach(fn => fn()); },
-  subscribe: (fn: () => void) => { _alwaysShowExplanationListeners.add(fn); return () => { _alwaysShowExplanationListeners.delete(fn); }; },
-};
-
 interface MemoSlideContentProps {
   memo: Memo;
-  onToggleExplanation: () => void;
+  defaultShowExplanation: boolean;
   onMenuAction: (memo: Memo) => void;
   onCopyText: (text: string) => void;
 }
 
 const MemoSlideContent = React.memo(({
-  memo, onToggleExplanation, onMenuAction, onCopyText,
+  memo, defaultShowExplanation, onMenuAction, onCopyText,
 }: MemoSlideContentProps) => {
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const [showExplanation, setShowExplanation] = useState(defaultShowExplanation);
 
-  const currentMemoId_ = useSyncExternalStore(currentMemoIdStore.subscribe, currentMemoIdStore.get);
-  const isCurrent = memo.id === currentMemoId_;
-  const showExplanation_ = useSyncExternalStore(showExplanationStore.subscribe, showExplanationStore.get);
-  const alwaysShowExplanation_ = useSyncExternalStore(alwaysShowExplanationStore.subscribe, alwaysShowExplanationStore.get);
-  const showExplanationContent = alwaysShowExplanation_ || (showExplanation_ && isCurrent);
+  // Reset to default when the app-level setting changes
+  useEffect(() => {
+    setShowExplanation(defaultShowExplanation);
+  }, [defaultShowExplanation]);
 
   const handlers = useMemo(() => {
     const makeHandlers = (text: string) => ({
@@ -82,7 +53,7 @@ const MemoSlideContent = React.memo(({
   }, [memo.originalText, memo.explanation, onCopyText]);
 
   return (
-    <div onClick={onToggleExplanation} className="memo-card">
+    <div onClick={() => setShowExplanation(!showExplanation)} className="memo-card">
       <IonButton fill="clear" color="medium" className="memo-card-menu-btn"
         onClick={(e) => { e.stopPropagation(); onMenuAction(memo); }}>
         <IonIcon slot="icon-only" icon={ellipsisVertical} />
@@ -90,7 +61,7 @@ const MemoSlideContent = React.memo(({
       <div className="memo-card-text" {...handlers.textHandlers}>
         {memo.originalText}
       </div>
-      {(showExplanationContent) && (
+      {showExplanation && (
         <div className="memo-card-explanation" {...handlers.explanationHandlers}>
           {memo.explanation}
         </div>
@@ -103,21 +74,10 @@ const NotebookPage: React.FC = () => {
   using _ = new ScopedTimer('NotebookPage render');
   const { id: notebookId } = useParams<{ id: string }>();
   const history = useHistory();
-  const { notebooks, memos, deleteMemo, addMemo, editMemo } = useApp();
+  const { notebooks, memos, deleteMemo, addMemo, editMemo, defaultShowExplanation, setDefaultShowExplanation } = useApp();
   const { viewProgress, updateProgress } = useProgress();
 
-  const showExplanation = useMemo(() => viewProgress[notebookId]?.showExplanation ?? false, [viewProgress, notebookId]);
-  const alwaysShowExplanation = useMemo(() => viewProgress[notebookId]?.alwaysShowExplanation ?? false, [viewProgress, notebookId]);
   const currentMemoId = useMemo(() => viewProgress[notebookId]?.currentMemoId ?? null, [viewProgress, notebookId]);
-
-  // Sync stores post-commit so MemoSlideContent sees latest values.
-  // For swipe: stores are already set in rAF, this is a no-op.
-  // For tap-to-toggle: this is the primary sync path.
-  useEffect(() => {
-    currentMemoIdStore.set(currentMemoId);
-    showExplanationStore.set(showExplanation);
-    alwaysShowExplanationStore.set(alwaysShowExplanation);
-  }, [currentMemoId, showExplanation, alwaysShowExplanation]);
 
   const [isAddOpen, setIsAddOpen] = useState(false);
   const [addMode, setAddMode] = useState<'add' | 'paste'>('add');
@@ -157,25 +117,13 @@ const NotebookPage: React.FC = () => {
   const [originalIndex, setOriginalIndex] = useState<number | null>(null);
   const [hasDragged, setHasDragged] = useState(false);
   const [swiperInstance, setSwiperInstance] = useState<any>(null);
-  const [dragSliderIndex, setDragSliderIndex] = useState(currentIndex >= 0 ? currentIndex : 0);
-  const sliderIndexRef = useRef(currentIndex >= 0 ? currentIndex : 0);
 
-  const sliderIndex = hasDragged ? dragSliderIndex : (currentIndex >= 0 ? currentIndex : 0);
+  const sliderIndex = currentIndex >= 0 ? currentIndex : 0;
 
-  const handleToggleAlwaysShow = (e?: CustomEvent) => {
-    const checked = e?.detail?.checked ?? !alwaysShowExplanation;
-    updateProgress(notebookId, {
-      alwaysShowExplanation: checked,
-      showExplanation: checked ? true : showExplanation
-    });
+  const handleToggleDefaultShow = (e?: CustomEvent) => {
+    const checked = e?.detail?.checked ?? !defaultShowExplanation;
+    setDefaultShowExplanation(checked);
   };
-
-  const showExplanationRef = useRef(showExplanation);
-  showExplanationRef.current = showExplanation;
-
-  const handleToggleExplanation = useCallback(() => {
-    updateProgress(notebookId, { showExplanation: !showExplanationRef.current });
-  }, [notebookId, updateProgress]);
 
   const handleAdd = async (originalText: string, explanation: string) => {
     await addMemo(notebookId, originalText, explanation);
@@ -228,19 +176,42 @@ const NotebookPage: React.FC = () => {
       <SwiperSlide key={memo.id} virtualIndex={index} className="swiper-slide-content">
         <MemoSlideContent
           memo={memo}
-          onToggleExplanation={handleToggleExplanation}
+          defaultShowExplanation={defaultShowExplanation}
           onMenuAction={setMemoActionSheet}
           onCopyText={handleCopyText}
         />
       </SwiperSlide>
     )),
-    [notebookMemos, handleToggleExplanation, handleCopyText]
+    [notebookMemos, defaultShowExplanation, handleCopyText]
   );
 
   if (!notebook && notebooks.length > 0) {
     history.replace('/');
     return null;
   }
+
+  useWhyDidYouUpdate('NotebookPage', {
+    notebookId,
+    notebooks,
+    memos,
+    defaultShowExplanation,
+    viewProgress,
+    currentMemoId,
+    initialMemoId,
+    notebook,
+    notebookMemos,
+    currentIndex,
+    currentMemo,
+    isAddOpen,
+    addMode,
+    editingMemo,
+    isMenuOpen,
+    memoActionSheet,
+    originalIndex,
+    hasDragged,
+    sliderIndex,
+    slides,
+  })
 
   return (
     <IonPage>
@@ -319,7 +290,6 @@ const NotebookPage: React.FC = () => {
                     }
                     setHasDragged(true);
                     const newIndex = parseInt(e.target.value, 10);
-                    setDragSliderIndex(newIndex);
                     if (swiperInstance) {
                       swiperInstance.slideTo(newIndex, 0);
                     }
@@ -348,10 +318,7 @@ const NotebookPage: React.FC = () => {
                   if (hasDragged && originalIndex !== null && swiperInstance) {
                     const originalMemo = notebookMemos[originalIndex];
                     if (originalMemo) {
-                      updateProgress(notebookId, {
-                        currentMemoId: originalMemo.id,
-                        showExplanation: alwaysShowExplanation
-                      });
+                      updateProgress(notebookId, { currentMemoId: originalMemo.id });
                     }
                     swiperInstance.slideTo(originalIndex, 0);
                     setHasDragged(false);
@@ -364,9 +331,6 @@ const NotebookPage: React.FC = () => {
 
             <Swiper
               onSwiper={setSwiperInstance}
-              onSlideChange={(swiper) => {
-                sliderIndexRef.current = swiper.activeIndex;
-              }}
               modules={[Virtual]}
               virtual={{ addSlidesBefore: 2, addSlidesAfter: 2 }}
               className="swiper-container"
@@ -374,16 +338,7 @@ const NotebookPage: React.FC = () => {
               onSlideChangeTransitionEnd={(swiper) => {
                 const newMemo = notebookMemos[swiper.activeIndex];
                 if (newMemo) {
-                  const notebookId_ = notebookId;
-                  const alwaysShow = alwaysShowExplanation;
-                  requestAnimationFrame(() => {
-                    currentMemoIdStore.set(newMemo.id);
-                    showExplanationStore.set(alwaysShow);
-                    updateProgress(notebookId_, {
-                      currentMemoId: newMemo.id,
-                      showExplanation: alwaysShow
-                    });
-                  });
+                  updateProgress(notebookId, { currentMemoId: newMemo.id });
                 }
               }}
             >
@@ -403,10 +358,10 @@ const NotebookPage: React.FC = () => {
           </IonFabButton>
         </IonFab>
 
-        <IonPopover isOpen={isMenuOpen} onDidDismiss={() => setIsMenuOpen(false)}>
+        <IonPopover isOpen={isMenuOpen} onDidDismiss={() => setIsMenuOpen(false)} style={{ '--min-width': '260px' } as React.CSSProperties}>
           <IonItem lines="none">
-            <IonLabel>Always show explanation</IonLabel>
-            <IonToggle slot="end" checked={alwaysShowExplanation} onIonChange={handleToggleAlwaysShow} />
+            <IonLabel style={{ whiteSpace: 'nowrap' }}>Default show explanation</IonLabel>
+            <IonToggle slot="end" checked={defaultShowExplanation} onIonChange={handleToggleDefaultShow} />
           </IonItem>
         </IonPopover>
 

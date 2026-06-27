@@ -7,6 +7,7 @@ const NOTEBOOKS_KEY = 'memo-pads:notebooks';
 const MEMOS_KEY = 'memo-pads:memos';
 const PROGRESS_KEY = 'memo-pads:progress';
 const DEVICE_ID_KEY = 'memo-pads:device-id';
+const DEFAULT_SHOW_KEY = 'memo-pads:default-show-explanation';
 
 const getDeviceId = (): string => {
   let deviceId = localStorage.getItem(DEVICE_ID_KEY);
@@ -27,6 +28,8 @@ interface AppContextType {
   notebooks: Notebook[];
   activeNotebooks: Notebook[];
   memos: Memo[];
+  defaultShowExplanation: boolean;
+  setDefaultShowExplanation: (v: boolean) => void;
 
   addNotebook: (name: string) => Promise<void>;
   editNotebook: (notebook: Notebook) => void;
@@ -59,24 +62,19 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
   const [notebooks, setNotebooks] = useLocalStorageState<Notebook[]>(NOTEBOOKS_KEY, []);
   const [memos, setMemos] = useLocalStorageState<Memo[]>(MEMOS_KEY, []);
   const [viewProgress, setViewProgress] = useLocalStorageState<Record<string, ViewProgress>>(PROGRESS_KEY, {});
+  const [defaultShowExplanation, setDefaultShowExplanation] = useLocalStorageState<boolean>(DEFAULT_SHOW_KEY, false);
 
   const activeNotebooks = useMemo(() => notebooks.filter(n => !n.isDeleted), [notebooks]);
 
   const updateProgress = useCallback((notebookId: string, updates: Partial<ViewProgress>) => {
-    console.log('updateProgress', notebookId, updates);
-    console.time('updateProgress');
     setViewProgress(prev => ({
       ...prev,
       [notebookId]: {
+        ...(prev[notebookId] || { currentMemoId: null }),
+        ...updates,
         notebookId,
-        currentMemoId: null,
-        showExplanation: false,
-        alwaysShowExplanation: false,
-        ...(prev[notebookId] || {}),
-        ...updates
       }
     }));
-    console.timeEnd('updateProgress');
   }, [setViewProgress]);
 
   const addNotebook = useCallback(async (name: string) => {
@@ -300,6 +298,8 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     notebooks,
     activeNotebooks,
     memos,
+    defaultShowExplanation,
+    setDefaultShowExplanation,
     addNotebook,
     editNotebook,
     deleteNotebook,
@@ -313,7 +313,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     importData,
     weReadImport,
   }), [
-    notebooks, activeNotebooks, memos,
+    notebooks, activeNotebooks, memos, defaultShowExplanation, setDefaultShowExplanation,
     addNotebook, editNotebook, deleteNotebook, restoreNotebook, permanentDeleteNotebook,
     addMemo, editMemo, deleteMemo, restoreMemo, permanentDeleteMemo,
     importData, weReadImport,

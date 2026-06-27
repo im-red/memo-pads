@@ -66,8 +66,9 @@ test.describe('Capture Screenshots for README', () => {
             localStorage.setItem('memo-pads:memos', JSON.stringify(memos));
 
             localStorage.setItem('memo-pads:progress', JSON.stringify({
-                '1': { currentMemoId: '1', showExplanation: true, alwaysShowExplanation: false }
+                '1': { currentMemoId: '1' }
             }));
+            localStorage.setItem('memo-pads:default-show-explanation', JSON.stringify(true));
         });
 
         await page.reload();

@@ -31,6 +31,33 @@ export function withTimer<T>(label: string, fn: () => T): T {
 }
 
 /**
+ * Safely serializes a value to JSON, replacing circular references and
+ * non-serializable values (functions, React elements, etc.) with placeholders.
+ */
+function safeStringify(value: unknown): string {
+  const seen = new WeakSet();
+  try {
+    return JSON.stringify(value, (_key, val) => {
+      if (val !== null && typeof val === 'object') {
+        if (seen.has(val)) {
+          return '[Circular]';
+        }
+        seen.add(val);
+      }
+      if (typeof val === 'function') {
+        return '[Function]';
+      }
+      if (typeof val === 'symbol') {
+        return '[Symbol]';
+      }
+      return val;
+    });
+  } catch {
+    return '[Unserializable]';
+  }
+}
+
+/**
  * Logs which props changed to cause a React.memo re-render.
  * Must be called directly at the top of a component body (not inside a hook conditionally).
  *
@@ -46,7 +73,7 @@ export function useWhyDidYouUpdate(name: string, props: Record<string, unknown>)
     const allKeys = new Set([...Object.keys(prev), ...Object.keys(props)]);
     for (const key of allKeys) {
       if (prev[key] !== props[key]) {
-        changed.push(`${key}: ${JSON.stringify(prev[key])} -> ${JSON.stringify(props[key])}`);
+        changed.push(`${key}: ${safeStringify(prev[key])} -> ${safeStringify(props[key])}`);
       }
     }
   }
