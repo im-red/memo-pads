@@ -70,6 +70,79 @@ const MemoSlideContent = React.memo(({
   );
 });
 
+const MemoListItem = React.memo(({
+  memo, index, currentMemoId, onJump,
+}: {
+  memo: Memo;
+  index: number;
+  currentMemoId: string | null;
+  onJump: (memo: Memo) => void;
+}) => (
+  <IonItem button lines="none" detail={memo.id === currentMemoId} onClick={() => onJump(memo)} style={{ height: `${ITEM_HEIGHT}px` }}>
+    <IonLabel style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+      <small style={{ color: 'var(--ion-color-medium)' }}>{index + 1}. </small>
+      <span style={{ fontWeight: memo.id === currentMemoId ? 600 : 400 }}>
+        {memo.originalText}
+      </span>
+    </IonLabel>
+  </IonItem>
+));
+
+const ITEM_HEIGHT = 46;
+const OVERSCAN = 6;
+
+const MemoListContent = React.memo(({
+  memos, currentMemoId, onJump,
+}: {
+  memos: Memo[];
+  currentMemoId: string | null;
+  onJump: (memo: Memo) => void;
+}) => {
+  const anchorRef = useRef<HTMLDivElement>(null);
+  const [range, setRange] = useState({ start: 0, end: 40 });
+
+  useEffect(() => {
+    const el = anchorRef.current?.parentElement;
+    if (!el) return;
+
+    const update = () => {
+      const st = el.scrollTop;
+      const h = el.clientHeight;
+      const start = Math.max(0, Math.floor(st / ITEM_HEIGHT) - OVERSCAN);
+      const visible = Math.ceil(h / ITEM_HEIGHT) + OVERSCAN * 2;
+      setRange({ start, end: Math.min(memos.length, start + visible) });
+    };
+
+    update();
+    const ro = new ResizeObserver(update);
+    ro.observe(el);
+    el.addEventListener('scroll', update, { passive: true });
+    return () => {
+      ro.disconnect();
+      el.removeEventListener('scroll', update);
+    };
+  }, [memos.length]);
+
+  const totalHeight = memos.length * ITEM_HEIGHT;
+  const offsetY = range.start * ITEM_HEIGHT;
+
+  return (
+    <div ref={anchorRef} style={{ height: totalHeight, position: 'relative' }}>
+      <div style={{ position: 'absolute', top: offsetY, left: 0, right: 0 }}>
+        {memos.slice(range.start, range.end).map((memo, i) => (
+          <MemoListItem
+            key={memo.id}
+            memo={memo}
+            index={range.start + i}
+            currentMemoId={currentMemoId}
+            onJump={onJump}
+          />
+        ))}
+      </div>
+    </div>
+  );
+});
+
 const NotebookPage: React.FC = () => {
   using _ = new ScopedTimer('NotebookPage render');
   const { id: notebookId } = useParams<{ id: string }>();
@@ -83,6 +156,9 @@ const NotebookPage: React.FC = () => {
   const [addMode, setAddMode] = useState<'add' | 'paste'>('add');
   const [editingMemo, setEditingMemo] = useState<Memo | null>(null);
   const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const [isMemoListOpen, setIsMemoListOpen] = useState(false);
+  const [memoListEvent, setMemoListEvent] = useState<{ clientX: number; clientY: number } | null>(null);
+  const memoListScrollRef = useRef<HTMLDivElement>(null);
   const [memoActionSheet, setMemoActionSheet] = useState<Memo | null>(null);
 
   const notebook = useMemo(() => notebooks.find(n => n.id === notebookId), [notebooks, notebookId]);
@@ -124,6 +200,15 @@ const NotebookPage: React.FC = () => {
     const checked = e?.detail?.checked ?? !defaultShowExplanation;
     setDefaultShowExplanation(checked);
   };
+
+  const handleJumpToMemo = useCallback((memo: Memo) => {
+    const index = notebookMemos.findIndex(m => m.id === memo.id);
+    if (index >= 0 && swiperInstance) {
+      updateProgress(notebookId, { currentMemoId: memo.id });
+      swiperInstance.slideTo(index, 0);
+    }
+    setIsMemoListOpen(false);
+  }, [notebookMemos, swiperInstance, notebookId, updateProgress]);
 
   const handleAdd = async (originalText: string, explanation: string) => {
     await addMemo(notebookId, originalText, explanation);
@@ -363,6 +448,42 @@ const NotebookPage: React.FC = () => {
             <IonLabel style={{ whiteSpace: 'nowrap' }}>Default show explanation</IonLabel>
             <IonToggle slot="end" checked={defaultShowExplanation} onIonChange={handleToggleDefaultShow} />
           </IonItem>
+          <IonItem button detail lines="none" onClick={() => { setIsMenuOpen(false); setMemoListEvent({ clientX: window.innerWidth / 2, clientY: window.innerHeight / 2 }); setIsMemoListOpen(true); }}>
+            <IonLabel>View all memos ({notebookMemos.length})</IonLabel>
+          </IonItem>
+        </IonPopover>
+
+        <IonPopover
+          isOpen={isMemoListOpen}
+          event={memoListEvent}
+          onDidPresent={() => {
+            const el = memoListScrollRef.current;
+            if (!el || !currentMemoId) {
+              return;
+            }
+            const index = notebookMemos.findIndex(m => m.id === currentMemoId);
+            if (index < 0) {
+              return;
+            }
+            const h = el.clientHeight;
+            const target = index * ITEM_HEIGHT - h / 2 + ITEM_HEIGHT / 2;
+            const clamped = Math.max(0, Math.min(target, notebookMemos.length * ITEM_HEIGHT - h));
+            el.scrollTop = clamped;
+            el.style.visibility = 'visible';
+          }}
+          onDidDismiss={() => { setIsMemoListOpen(false); setMemoListEvent(null); }}
+          style={{ '--min-width': '280px', '--height': '60vh' } as React.CSSProperties}
+        >
+          <div className="memo-list-popover" style={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
+            <div className="ion-padding-horizontal ion-padding-top" style={{ flexShrink: 0 }}>
+              <IonText color="medium">
+                <small>{notebookMemos.length} memos in {notebook?.name}</small>
+              </IonText>
+            </div>
+            <div ref={memoListScrollRef} style={{ flex: 1, minHeight: 0, overflowY: 'auto', WebkitOverflowScrolling: 'touch', visibility: 'hidden' }}>
+              <MemoListContent memos={notebookMemos} currentMemoId={currentMemoId} onJump={handleJumpToMemo} />
+            </div>
+          </div>
         </IonPopover>
 
         <IonActionSheet
