@@ -1,3 +1,19 @@
+## [v1.1.2] - 2026-06-28
+
+### New Features
+
+- **Memo List View** - Support viewing a list of all memos in a notebook for easier navigation and overview.
+
+- **UI Enhancements** - Minor UI updates for improved user experience.
+
+### Improvements
+
+- **Explanation Toggle** - Simplified the logic of explanation toggle for better code maintainability.
+
+### Fixes
+
+- **Notebook Page Re-render** - Fixed re-render issue in notebook page that caused unnecessary UI updates.
+
 ## [v1.1.1] - 2026-06-09
 
 ### New Features
