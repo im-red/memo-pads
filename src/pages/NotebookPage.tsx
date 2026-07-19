@@ -17,7 +17,7 @@ import { Clipboard } from '@capacitor/clipboard';
 import { Haptics, ImpactStyle } from '@capacitor/haptics';
 import { useApp, useProgress } from '../data/AppContext';
 import { Memo } from '../models';
-import AddMemoOverlay from '../components/AddMemoOverlay';
+import AddMemoOverlay, { MemoEntry } from '../components/AddMemoOverlay';
 import { ScopedTimer, useWhyDidYouUpdate } from '../utils/debug';
 
 import './NotebookPage.scss';
@@ -210,8 +210,10 @@ const NotebookPage: React.FC = () => {
     setIsMemoListOpen(false);
   }, [notebookMemos, swiperInstance, notebookId, updateProgress]);
 
-  const handleAdd = async (originalText: string, explanation: string) => {
-    await addMemo(notebookId, originalText, explanation);
+  const handleAdd = async (entries: MemoEntry[]) => {
+    for (const entry of entries) {
+      await addMemo(notebookId, entry.originalText, entry.explanation);
+    }
   };
 
   const handleEdit = async (memo: Memo) => {

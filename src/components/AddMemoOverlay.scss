@@ -6,3 +6,34 @@
 .flex-button {
   flex: 1;
 }
+
+.add-memo-content {
+  --padding-start: 8px;
+  --padding-end: 8px;
+  --padding-top: 8px;
+  --padding-bottom: 8px;
+}
+
+.memo-entry {
+  margin-bottom: 4px;
+}
+
+.memo-entry-item {
+  --padding-start: 8px;
+  --padding-top: 0;
+  --padding-bottom: 0;
+  --inner-padding-end: 8px;
+  --inner-padding-top: 0;
+  --inner-padding-bottom: 0;
+  --min-height: 0;
+
+  ion-textarea {
+    --padding-top: 0;
+    --padding-bottom: 0;
+  }
+}
+
+.remove-entry-row {
+  margin-top: 2px;
+  padding-right: 4px;
+}
