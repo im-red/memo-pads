@@ -24,13 +24,14 @@ import './NotebookPage.scss';
 
 interface MemoSlideContentProps {
   memo: Memo;
+  index: number;
   defaultShowExplanation: boolean;
   onMenuAction: (memo: Memo) => void;
   onCopyText: (text: string) => void;
 }
 
 const MemoSlideContent = React.memo(({
-  memo, defaultShowExplanation, onMenuAction, onCopyText,
+  memo, index, defaultShowExplanation, onMenuAction, onCopyText,
 }: MemoSlideContentProps) => {
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [showExplanation, setShowExplanation] = useState(defaultShowExplanation);
@@ -59,7 +60,7 @@ const MemoSlideContent = React.memo(({
         <IonIcon slot="icon-only" icon={ellipsisVertical} />
       </IonButton>
       <div className="memo-card-text" {...handlers.textHandlers}>
-        {memo.originalText}
+        {index + 1}. {memo.originalText}
       </div>
       {showExplanation && (
         <div className="memo-card-explanation" {...handlers.explanationHandlers}>
@@ -263,6 +264,7 @@ const NotebookPage: React.FC = () => {
       <SwiperSlide key={memo.id} virtualIndex={index} className="swiper-slide-content">
         <MemoSlideContent
           memo={memo}
+          index={index}
           defaultShowExplanation={defaultShowExplanation}
           onMenuAction={setMemoActionSheet}
           onCopyText={handleCopyText}
@@ -336,15 +338,6 @@ const NotebookPage: React.FC = () => {
         ) : currentMemo ? (
           <div className="notebook-progress-container">
             <div className="progress-header">
-              <span
-                className="progress-index"
-                style={{
-                  minWidth: `${String(notebookMemos.length).length * 2 + 3}ch`
-                }}
-              >
-                {sliderIndex + 1} / {notebookMemos.length}
-              </span>
-
               <div className="progress-slider-wrapper">
                 <div className="progress-track-bg">
                   <div
@@ -392,28 +385,6 @@ const NotebookPage: React.FC = () => {
                   />
                 )}
               </div>
-
-              <IonButton
-                data-testid="reset-progress-button"
-                className="reset-progress-button"
-                fill="clear"
-                size="small"
-                style={{
-                  visibility: hasDragged ? 'visible' : 'hidden'
-                }}
-                onClick={() => {
-                  if (hasDragged && originalIndex !== null && swiperInstance) {
-                    const originalMemo = notebookMemos[originalIndex];
-                    if (originalMemo) {
-                      updateProgress(notebookId, { currentMemoId: originalMemo.id });
-                    }
-                    swiperInstance.slideTo(originalIndex, 0);
-                    setHasDragged(false);
-                  }
-                }}
-              >
-                <IonIcon slot="icon-only" icon={refresh} color="medium" />
-              </IonButton>
             </div>
 
             <Swiper
@@ -433,6 +404,34 @@ const NotebookPage: React.FC = () => {
             </Swiper>
           </div>
         ) : null}
+
+        <IonFab
+          vertical="bottom"
+          horizontal="end"
+          slot="fixed"
+          className="reset-progress-fab"
+          style={{
+            visibility: hasDragged ? 'visible' : 'hidden'
+          }}
+        >
+          <IonFabButton
+            data-testid="reset-progress-button"
+            color="medium"
+            size="small"
+            onClick={() => {
+              if (hasDragged && originalIndex !== null && swiperInstance) {
+                const originalMemo = notebookMemos[originalIndex];
+                if (originalMemo) {
+                  updateProgress(notebookId, { currentMemoId: originalMemo.id });
+                }
+                swiperInstance.slideTo(originalIndex, 0);
+                setHasDragged(false);
+              }
+            }}
+          >
+            <IonIcon icon={refresh} />
+          </IonFabButton>
+        </IonFab>
 
         <IonFab vertical="bottom" horizontal="end" slot="fixed" className="fab-secondary-container">
           <IonFabButton className="fab--secondary" color="secondary" onClick={() => { setEditingMemo(null); setAddMode('paste'); setIsAddOpen(true); }}>

@@ -199,8 +199,8 @@ test.describe('Memo Content Scrolling on Mobile', () => {
     await addMemo(page, longText, 'Explanation 1');
     await addMemo(page, 'Second Memo', 'Explanation 2');
 
-    const progressText = await page.locator('span').filter({ hasText: /\d+ \/ \d+/ }).textContent();
-    expect(progressText).toContain('1 / 2');
+    const progressText = await page.locator('.swiper-slide-active').textContent();
+    expect(progressText).toContain('1. Long content');
 
     const memoCard = page.locator('.swiper-slide-active > div');
     const cardBox = await memoCard.boundingBox();
@@ -217,8 +217,8 @@ test.describe('Memo Content Scrolling on Mobile', () => {
 
       await page.waitForTimeout(1000);
 
-      const newProgressText = await page.locator('span').filter({ hasText: /\d+ \/ \d+/ }).textContent();
-      expect(newProgressText).toContain('2 / 2');
+      const newProgressText = await page.locator('.swiper-slide-active').textContent();
+      expect(newProgressText).toContain('2. Second Memo');
 
       console.log('✓ Horizontal swipe navigation works with scrollable content');
     }

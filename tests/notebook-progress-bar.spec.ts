@@ -21,11 +21,8 @@ test.describe('Notebook Progress Bar and Slider', () => {
     // Add one memo
     await addMemo(page, 'Memo 1', 'Explanation 1');
     
-    // Verify progress text
-    const indexText = page.locator('span', { hasText: '1 / 1' });
-    await expect(indexText).toBeVisible();
-    await expect(indexText).toHaveCSS('text-align', 'right');
-    await expect(indexText).toHaveCSS('font-variant-numeric', 'tabular-nums');
+    // Verify memo card shows index
+    await expect(page.locator('.swiper-slide-active:has-text("1. Memo 1")')).toBeVisible();
 
     // Verify slider attributes
     const slider = page.locator('input[type="range"]');
@@ -47,7 +44,7 @@ test.describe('Notebook Progress Bar and Slider', () => {
     await addMemo(page, 'Memo 3', 'Explanation 3');
     
     // Check initial state (should be on Memo 1, index 0)
-    await expect(page.locator('span', { hasText: '1 / 3' })).toBeVisible();
+    await expect(page.locator('.swiper-slide-active:has-text("1. Memo 1")')).toBeVisible();
     
     const slider = page.locator('input[type="range"]');
     await expect(slider).toHaveValue('0');
@@ -61,7 +58,7 @@ test.describe('Notebook Progress Bar and Slider', () => {
     await slider.dispatchEvent('change'); // trigger the onChange event
 
     // Check state after drag
-    await expect(page.locator('span', { hasText: '3 / 3' })).toBeVisible();
+    await expect(page.locator('.swiper-slide-active:has-text("3. Memo 3")')).toBeVisible();
     await expect(resetButton).toHaveCSS('visibility', 'visible');
     
     // Verify Swiper navigated to Memo 3
@@ -75,7 +72,7 @@ test.describe('Notebook Progress Bar and Slider', () => {
     await resetButton.click();
 
     // Check state after reset
-    await expect(page.locator('span', { hasText: '1 / 3' })).toBeVisible();
+    await expect(page.locator('.swiper-slide-active:has-text("1. Memo 1")')).toBeVisible();
     await expect(slider).toHaveValue('0');
     await expect(resetButton).toHaveCSS('visibility', 'hidden');
     await expect(page.locator('.swiper-slide-active:has-text("Memo 1")')).toBeVisible();
