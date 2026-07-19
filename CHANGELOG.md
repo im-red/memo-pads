@@ -1,3 +1,15 @@
+## [v1.1.3] - 2026-07-19
+
+### New Features
+
+- **Batch Add Memos** - Support adding multiple memo entries at once with batch paste, parsing content blocks separated by blank lines.
+
+### Improvements
+
+- **Progress Bar UI** - Minor UI updates to the progress bar for a cleaner look.
+
+- **App Name** - Updated the application display name.
+
 ## [v1.1.2] - 2026-06-28
 
 ### New Features
